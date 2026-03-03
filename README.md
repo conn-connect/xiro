@@ -135,13 +135,13 @@ All workers run in isolated git worktrees.
 ### Option 1: Clone directly into Claude Code skills directory
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/xiro.git ~/.claude/skills/xiro
+git clone https://github.com/conn-connect/xiro.git ~/.claude/skills/xiro
 ```
 
 ### Option 2: Clone and symlink
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/xiro.git ~/xiro
+git clone https://github.com/conn-connect/xiro.git ~/xiro
 ln -s ~/xiro ~/.claude/skills/xiro
 ```
 
@@ -152,13 +152,13 @@ After installation, restart Claude Code. The skill will be automatically detecte
 **방법 1: Claude Code skills 디렉토리에 직접 클론**
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/xiro.git ~/.claude/skills/xiro
+git clone https://github.com/conn-connect/xiro.git ~/.claude/skills/xiro
 ```
 
 **방법 2: 클론 후 심볼릭 링크**
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/xiro.git ~/xiro
+git clone https://github.com/conn-connect/xiro.git ~/xiro
 ln -s ~/xiro ~/.claude/skills/xiro
 ```
 
@@ -217,7 +217,7 @@ When you use xiro, it creates:
 
 ## Related
 
-- [hiro](https://github.com/YOUR_USERNAME/hiro) — The original with 7-rule Honest Failure Protocol and screenshot honesty
+- [hiro](https://github.com/conn-connect/hiro) — The original with 7-rule Honest Failure Protocol and screenshot honesty
 
 ## License
 
