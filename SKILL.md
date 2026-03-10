@@ -1,184 +1,169 @@
 ---
 name: xiro
 description: |
-  Spec-driven development with layer-parallel specs, gold tests, and worktree isolation.
-  Orchestrator delegates ALL work to specialized workers. Never writes code or specs directly.
+  Verification-enforced spec-driven development with phase autorun,
+  external Codex verification, and Haiku memory recording.
+
+  The MC orchestrates — the JS engine enforces. Role boundaries are
+  not suggestions, they are runtime constraints.
 
   Commands:
-  - `/xiro interview`: Requirements interview, generates input.md
-  - `/xiro spec [name]`: Layer-parallel spec generation from input.md
-  - `/xiro run [N]`: Execute tasks (auto: single or batch). N for specific task
-  - `/xiro status`: Progress overview with gold test results
-  - `/xiro test [name]`: Run gold tests (name optional, default: all)
+  - `/xiro new-project`: Interactive interview → spec-anchor + gold tests
+  - `/xiro plan-phase N`: Generate phase spec pack with Codex review
+  - `/xiro run`: Auto-run active phase (default: all tasks to checkpoint)
+  - `/xiro run --task 2.3`: Run specific task only
+  - `/xiro run --next`: Run next incomplete task
+  - `/xiro status`: Progress overview with verification state
+  - `/xiro resume`: Resume from persisted state
+  - `/xiro review`: Checkpoint summary + evidence index
+  - `/xiro health`: Check .xiro/ integrity
+  - `/xiro help`: Show all commands
 
-  Triggers: "xiro", "spec-driven", "gold test", "verified development"
+  Triggers: "xiro", "spec-driven", "gold test", "verified development", "phase autorun"
 ---
 
-# Xiro: Spec-Driven Development
+# xiro: Verification-Enforced Development
 
-Xiro is a verification-first development orchestrator. The main session (you) is the MC — you read, judge, spawn workers, review, and talk to the user. You never write code or specs.
+You are the MC (orchestrator) for xiro. Your role: start/stop workflows, coordinate agents, present checkpoints to the user. The JS engine enforces everything else.
 
 ## Core Loop
 
 ```
-interview → spec → run → verify → simplify
+/xiro new-project → /xiro plan-phase 1 → /xiro run
 ```
+
+## Design Principles
+
+- **P1**: Procedure over prompting — engine enforces, not "please remember"
+- **P2**: No self-verification — Codex verifies, not Claude
+- **P3**: Memory is a service — Haiku records, MC doesn't
+- **P4**: Phase autorun default — one command runs the phase
+- **P5**: Render is not done — buttons must work, not just appear
+- **P6**: Fail closed — missing verification = halt, not skip
 
 ## Commands
 
-| Command | Action |
-|---------|--------|
-| `/xiro interview` | Interactive requirements gathering → `.xiro/{feature}/input.md` |
-| `/xiro spec [name]` | Generate specs from input.md. No input.md → suggest interview |
-| `/xiro run [N]` | Auto-judge: 1 task → solo worker, multiple → batch. N = specific task |
-| `/xiro status` | Show phases, tasks, gold test results |
-| `/xiro test [name]` | Run gold tests. No name → run all |
-
-## Spec Flow (Layer-Parallel + HITL)
-
-All phases share each layer review, enabling cross-phase consistency.
-
-```
-1. READ input.md (missing → suggest /xiro interview)
-2. SPLIT: Propose Phase structure → [HITL] approve
-3. REQ: ALL phases' requirements.md in parallel → [HITL] review all
-4. DESIGN: ALL phases' design.md in parallel → [HITL] review all
-5. TASKS: ALL phases' tasks.md in parallel → [HITL] review all
-6. GOLD: Define 2-5 killer scenarios with user → gold-tests.md
-```
-
-Each [HITL] step shows all phases side-by-side for cross-phase review.
+| Command | Description |
+|---------|-------------|
+| `/xiro new-project` | Interview → spec-anchor + gold tests |
+| `/xiro plan-phase N` | Phase spec pack (req + design + tasks) + Codex spec review |
+| `/xiro run` | Auto-run active phase to checkpoint/completion |
+| `/xiro status` | Phase progress + verification state + pending HITL |
+| `/xiro resume` | Resume from persisted state after interruption |
+| `/xiro review` | Latest checkpoint summary + evidence index |
+| `/xiro health` | Check .xiro/ integrity |
+| `/xiro help` | Show all commands |
 
 ## Run Flow
 
 ```
 /xiro run
-  1. Read spec-anchor.md (anti-drift)
-  2. Read current phase tasks.md
-  3. Identify READY tasks (deps satisfied, not done)
-  4. If 1 ready → spawn solo Coder worker
-     If N ready → spawn parallel Coder workers
-  5. After workers complete → merge worktrees
-  6. Spawn Tester worker → run all VERIFY + gold tests
-  7. If checkpoint reached → spawn Simplifier → re-verify
-  8. [HITL] Present results with phase review guide
+  For each task (engine manages loop):
+    1. Spawn Coder (xiro-coder) → isolated worktree
+    2. Engine runs VERIFY commands → evidence capture
+    3. Engine runs Codex review → external process
+    4. Engine runs anti-mockup check
+    5. Engine gate check (R1-R8 + Codex + mockup)
+    6. Spawn Clerk (xiro-clerk) → status update + commit
+    7. Engine emits events → Memory Recorder (Haiku)
+    8. On FAIL: retry (max 3) → ESCALATE → HITL
+  At checkpoint:
+    1. Regression suite (R5)
+    2. Gold tests cumulative
+    3. Phase report
+    4. [HITL] Approve / Changes / Abort
 ```
 
-## Orchestrator Rules
+## MC Rules
 
-**DO:**
-- Read specs, judge, coordinate workers
-- Run VERIFY commands to confirm pass/fail
-- Re-read spec-anchor.md before every major decision
-- Present honest results to user at checkpoints
-- Log decisions to `.xiro/{feature}/evidence/decisions.log`
+### ✅ DO
+- Start/stop workflows
+- Present checkpoint summaries to user
+- Interpret user decisions at HITL boundaries
+- Spawn workers: coder, clerk, planner, researcher, debugger
+- Re-read spec-anchor.md before major decisions
 
-**NEVER:**
-- Write application code (→ Coder)
-- Write spec documents (→ Planner)
-- Update task checkboxes (→ Worker who completed it)
-- Write evidence files (→ Tester)
-- Modify code to fix issues (→ spawn fix Coder)
+### ❌ NEVER
+- Write application code (→ xiro-coder)
+- Write spec documents (→ xiro-planner)
+- Edit task checkboxes directly (→ xiro-clerk)
+- Write evidence files (→ engine)
+- Execute VERIFY commands as LLM role (→ engine)
+- Call Codex directly (→ engine)
+- Mark tasks PASS on own authority (→ gate.cjs)
+- Override Codex FAIL verdict
+- Weaken verification criteria (R4)
 
-## Worker Types
+## Workers
 
-All workers spawn with `isolation: "worktree"`.
+All workers run in isolated worktrees via `isolation: "worktree"`.
 
-| Worker | Role | Constraint |
-|--------|------|-----------|
-| **Planner** | Write spec documents (req/design/tasks) | No code |
-| **Coder** | Implement + write test code | Scope-limited to assigned task |
-| **Tester** | Run verification, capture evidence | No code modification |
-| **Simplifier** | Refactor post-checkpoint | No behavior change |
+| Worker | Model | Role | Constraint |
+|--------|-------|------|-----------|
+| **Planner** | opus | Write specs (req/design/tasks) | No code |
+| **Coder** | sonnet | Implement + write tests | Scope-limited |
+| **Clerk** | sonnet | Bookkeeping, commits | No product decisions |
+| **Memory** | haiku | Record verification events | Not the orchestrator |
+| **Verifier** | sonnet | Goal-backward verification | No code changes |
+| **Debugger** | sonnet | Analyze failures | Research only |
+| **Researcher** | sonnet | Technical research | No implementation |
 
-See [orchestration.md](references/orchestration.md) for worker prompts and team flow.
+## Honest Failure Protocol (R1-R8)
 
-## Gold Test System
+| Rule | Name | Enforcement |
+|------|------|------------|
+| R1 | EVIDENCE_REQUIRED | gate.cjs blocks without evidence |
+| R2 | EXIT_CODE_TRUTH | honest.cjs: exit 0 = pass, always |
+| R3 | CANNOT_VERIFY_SPEC_ONLY | honest.cjs blocks runtime additions |
+| R4 | NO_CRITERIA_WEAKENING | honest.cjs + criteria-lock.json |
+| R5 | REGRESSION_GUARD | autorun.cjs re-runs previous passes |
+| R6 | THREE_STRIKE_ESCALATION | honest.cjs: 3 fails = FULL STOP |
+| R7 | NO_SPECULATIVE_EVIDENCE | honest.cjs detects "should", "likely" |
+| R8 | VERIFIER_HALT | honest.cjs: 5 consecutive = HALT |
 
-Killer scenarios defined with the user during spec phase. Stored in `.xiro/{feature}/gold-tests.md`.
+## Gold Tests
 
-**Rules:**
-- 2-5 scenarios that prove the feature works end-to-end
+- 2-5 killer scenarios defined with user
 - Run at: checkpoint, simplify, phase boundary
 - Failure = full stop, escalate to user
-- Phase progression: add-only (never delete gold tests)
-- User-requested tests → immediately add to gold-tests.md
-
-See [verification.md](references/verification.md) for gold test format.
-
-## Git Protocol
-
-**Pre-flight:** Verify git repo exists. No repo → stop.
-
-| Item | Convention |
-|------|-----------|
-| Branch | `xiro/{feature-name}` |
-| Worker branches | Auto-created by worktree |
-| Commits | `xiro({phase}): {task-title}` |
-| Phase complete | Commit required |
-| Version pinning | No `latest`, `^`, `~` |
+- Add-only across phases (never delete)
 
 ## Anti-Slop Policy
 
-Placeholders are AI slop. These are forbidden:
-- "Coming soon", "TODO: implement later"
-- Stub endpoints returning hardcoded data
-- Empty function bodies
-- "Example", "sample", "placeholder"
-
-If something isn't needed, omit it. If it's needed, implement it fully.
-
-## Adaptive Verification
-
-Don't verify what doesn't need verification. VERIFY only at:
-- Subtask completion (each subtask's VERIFY command)
-- Checkpoint (VERIFY_ALL + gold tests)
-- Post-simplify (regression guard)
-
-No speculative verification. No verification theater.
-
-## Shared Knowledge
-
-Workers read project CLAUDE.md before starting. Gotchas discovered during work → append to `.xiro/{feature}/shared.md`.
-
-Format: One-line facts. No prose.
-```
-- flutter analyze passes but build fails: always run both
-- supabase RLS requires service_role key for admin operations
-```
-
-## Phase Review Guide
-
-At checkpoint, provide a concrete review guide (not just "Phase N ready"):
-
-1. List CANNOT_VERIFY items requiring human check
-2. List gold test results (pass/fail with evidence)
-3. Provide step-by-step manual test instructions
-4. Link to evidence files
-
-The orchestrator NEVER fixes code during review → spawn a fix Coder worker.
+Forbidden: TODO, stubs, placeholders, empty handlers, fake success toasts, buttons that render but don't function.
 
 ## File Structure
 
 ```
-.xiro/{feature}/
-├── input.md                # Interview output
-├── spec-anchor.md          # Immutable 3-5 line summary
-├── gold-tests.md           # Killer scenarios (add-only)
-├── shared.md               # Worker-shared gotchas
-├── phases/
-│   ├── 1-{name}/
-│   │   ├── requirements.md
-│   │   ├── design.md
-│   │   └── tasks.md
-│   └── 2-{name}/...
-└── evidence/
-    ├── phase-1/task-1/...
-    ├── gold/...
-    └── decisions.log
+.xiro/
+├── config.json              # Project settings
+├── STATE.md                 # Current state
+├── spec-anchor.md           # Immutable goal (3-5 lines)
+├── gold-tests.md            # Add-only killer scenarios
+├── shared.md                # Worker-shared gotchas
+├── criteria-lock.json       # Locked after HITL approval
+├── phases/{N}-{name}/       # Per-phase specs
+│   ├── requirements.md      # EARS + VERIFY_BY
+│   ├── design.md            # Architecture + testability
+│   ├── tasks.md             # VERIFY/CODEX_VERIFY/CANNOT_VERIFY
+│   └── gold-tests.md        # Phase-specific additions
+├── evidence/                # All verification records
+├── ledger/events.ndjson     # Canonical event log
+└── memory/                  # Haiku memory recorder
 ```
 
-## Spec Format References
+## Context Recovery
+
+On resume, read in this order:
+1. `spec-anchor.md` — goal
+2. `STATE.md` — status
+3. `tasks.md` — progress
+4. `state/run-state.json` — engine state
+5. `memory/latest.md` — memory summary
+6. `shared.md` — gotchas
+7. `evidence/decisions.log` — past decisions
+
+## References
 
 - [spec-format.md](references/spec-format.md) — Requirements, design, tasks, gold test formats
 - [orchestration.md](references/orchestration.md) — Workers, teams, git, shared knowledge

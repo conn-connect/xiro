@@ -1,0 +1,39 @@
+{
+  "name": "xiro",
+  "version": "0.1.0",
+  "description": "Verification-enforced spec-driven development for Claude Code. Hiro's verification philosophy + GSD's JS engine.",
+  "bin": {
+    "xiro": "bin/install.js"
+  },
+  "files": [
+    "bin",
+    "commands",
+    "xiro",
+    "agents",
+    "hooks",
+    "references",
+    "SKILL.md"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "ai",
+    "verification",
+    "spec-driven-development",
+    "codex",
+    "gold-tests"
+  ],
+  "author": "conn-connect",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/conn-connect/xiro.git"
+  },
+  "homepage": "https://github.com/conn-connect/xiro",
+  "engines": {
+    "node": ">=16.7.0"
+  },
+  "scripts": {
+    "test": "node tests/run-tests.cjs"
+  }
+}
