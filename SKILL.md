@@ -1,84 +1,124 @@
 ---
 name: xiro
 description: |
-  Spec-driven development with layer-parallel specs, gold tests, and worktree isolation.
-  Orchestrator delegates ALL work to specialized workers. Never writes code or specs directly.
+  BDD-driven spec workflow with scenario-based requirements, THEN-slice execution,
+  gold tests, and worktree isolation. The orchestrator coordinates planners,
+  coders, testers, and simplifiers. It does not write product code or spec docs directly.
 
   Commands:
-  - `/xiro interview`: Requirements interview, generates input.md
-  - `/xiro spec [name]`: Layer-parallel spec generation from input.md
-  - `/xiro run [N]`: Execute tasks (auto: single or batch). N for specific task
-  - `/xiro status`: Progress overview with gold test results
-  - `/xiro test [name]`: Run gold tests (name optional, default: all)
+  - `/xiro init-project`: Kickoff discovery, generates project.md with candidate scenarios
+  - `/xiro spec [name]`: Read project.md, then generate spec.md and per-phase requirements.md, design.md, tests.md
+  - `/xiro run [slice]`: Execute one ready THEN slice or a small balanced group of slices
+  - `/xiro status`: Progress overview by scenario and THEN slice, plus gold test results
+  - `/xiro test [name]`: Run scenario tests from tests.md or gold tests from gold-tests.md
 
-  Triggers: "xiro", "spec-driven", "gold test", "verified development"
+  Triggers: "xiro", "BDD", "scenario-driven development", "gold test", "spec-driven"
 ---
 
-# Xiro: Spec-Driven Development
+# Xiro: BDD Spec-Driven Development
 
-Xiro is a verification-first development orchestrator. The main session (you) is the MC — you read, judge, spawn workers, review, and talk to the user. You never write code or specs.
+Xiro is a scenario-first development orchestrator. The main session (you) is the MC: read, judge, spawn workers, review evidence, and talk to the user. You never write application code or spec documents directly.
 
 ## Core Loop
 
 ```
-interview → spec → run → verify → simplify
+init-project -> spec -> slice -> verify -> review
 ```
 
 ## Commands
 
 | Command | Action |
 |---------|--------|
-| `/xiro interview` | Interactive requirements gathering → `.xiro/{feature}/input.md` |
-| `/xiro spec [name]` | Generate specs from input.md. No input.md → suggest interview |
-| `/xiro run [N]` | Auto-judge: 1 task → solo worker, multiple → batch. N = specific task |
-| `/xiro status` | Show phases, tasks, gold test results |
-| `/xiro test [name]` | Run gold tests. No name → run all |
+| `/xiro init-project` | Interactive kickoff and requirements discovery -> `.xiro/{feature}/project.md` |
+| `/xiro spec [name]` | Read `project.md`, then generate `spec.md` and per-phase `requirements.md`, `design.md`, `tests.md` |
+| `/xiro run [slice]` | Execute ready THEN slices from `tests.md`. Optional slice ID targets a specific slice |
+| `/xiro status` | Show scenario progress, slice status, and gold test results |
+| `/xiro test [name]` | Run named scenario/THEN slice tests, or all gold tests if no name is given |
+
+## Document Model
+
+Xiro uses five working documents plus the outer acceptance suite:
+
+1. `project.md` — kickoff discovery document for problem, users, must-work journeys, constraints, and candidate scenarios
+2. `spec.md` — top-level source of truth for goal, constraints, non-goals, phases, and gold-test candidates
+3. `requirements.md` — BDD scenarios written as `GIVEN / WHEN / THEN`
+4. `design.md` — technical approach and testability needed to satisfy the scenarios
+5. `tests.md` — executable verification plan where each entry maps to one `THEN` slice
+6. `gold-tests.md` — add-only end-to-end business scenarios that prove the feature works
+
+## BDD Rules
+
+### In `requirements.md`
+
+- Every user-visible behavior is written as a scenario
+- Each scenario has one `GIVEN`, one `WHEN`, and one or more `THEN`s
+- Every `THEN` gets a stable ID such as `S2.T3`
+- `THEN`s must describe observable outcomes, not implementation details
+
+### In `tests.md`
+
+- Each entry maps to exactly one `THEN` slice
+- The default progress unit is the `THEN`
+- Oversized `THEN`s must be split during authoring, not during implementation
+- Adjacent small `THEN`s may run in one batch only if the effort is balanced and the write scopes do not collide
+
+### Frontend verification
+
+- Default to executable automation steps first
+- Web UI: say how to start the app, what to click, and what DOM or state must change
+- Flutter UI: say how to launch or attach to the app, what widget to tap, and what visible state or logs must change
+- HITL is allowed only when automation is genuinely impractical
 
 ## Spec Flow (Layer-Parallel + HITL)
 
-All phases share each layer review, enabling cross-phase consistency.
+All phases still share each review layer for cross-phase consistency, but the artifact set changes.
 
 ```
-1. READ input.md (missing → suggest /xiro interview)
-2. SPLIT: Propose Phase structure → [HITL] approve
-3. REQ: ALL phases' requirements.md in parallel → [HITL] review all
-4. DESIGN: ALL phases' design.md in parallel → [HITL] review all
-5. TASKS: ALL phases' tasks.md in parallel → [HITL] review all
-6. GOLD: Define 2-5 killer scenarios with user → gold-tests.md
+1. READ project.md (missing -> suggest /xiro init-project)
+2. WRITE spec.md from project.md -> [HITL] approve feature goal, constraints, phase split
+3. REQ: ALL phases' requirements.md in parallel -> [HITL] review scenario coverage
+4. DESIGN: ALL phases' design.md in parallel -> [HITL] review technical sufficiency
+5. TESTS: ALL phases' tests.md in parallel -> [HITL] review THEN slice balance + executability
+6. GOLD: Define or refine 2-5 killer scenarios with user -> gold-tests.md
 ```
 
-Each [HITL] step shows all phases side-by-side for cross-phase review.
+At review time:
+
+- `requirements.md`: Are the scenarios complete, realistic, and user-visible?
+- `design.md`: Is the approach sufficient for these scenarios?
+- `tests.md`: Are the `THEN` slices small, balanced, and executable?
 
 ## Run Flow
 
 ```
 /xiro run
-  1. Read spec-anchor.md (anti-drift)
-  2. Read current phase tasks.md
-  3. Identify READY tasks (deps satisfied, not done)
-  4. If 1 ready → spawn solo Coder worker
-     If N ready → spawn parallel Coder workers
-  5. After workers complete → merge worktrees
-  6. Spawn Tester worker → run all VERIFY + gold tests
-  7. If checkpoint reached → spawn Simplifier → re-verify
-  8. [HITL] Present results with phase review guide
+  1. Read spec.md summary (anti-drift)
+  2. Read current phase tests.md
+  3. Identify READY THEN slices (deps satisfied, not done)
+  4. If 1 ready -> spawn solo Coder worker
+     If several small independent slices are ready -> spawn parallel Coder workers
+  5. After workers complete -> merge worktrees
+  6. Spawn Tester worker -> run exactly the matching VERIFY commands from tests.md
+  7. Update slice status immediately with evidence links
+  8. At checkpoint or phase boundary -> run gold tests
+  9. [HITL] Present scenario progress, slice evidence, and review guide
 ```
 
 ## Orchestrator Rules
 
 **DO:**
-- Read specs, judge, coordinate workers
-- Run VERIFY commands to confirm pass/fail
-- Re-read spec-anchor.md before every major decision
-- Present honest results to user at checkpoints
+- Read `spec.md`, `requirements.md`, `design.md`, and `tests.md`
+- Judge whether a `THEN` slice is ready to run
+- Re-read the `spec.md` summary before every major decision
+- Present honest results to the user at checkpoints
 - Log decisions to `.xiro/{feature}/evidence/decisions.log`
 
 **NEVER:**
-- Write application code (→ Coder)
-- Write spec documents (→ Planner)
-- Update task checkboxes (→ Worker who completed it)
-- Write evidence files (→ Tester)
-- Modify code to fix issues (→ spawn fix Coder)
+- Write application code (-> Coder)
+- Write spec documents (-> Planner)
+- Rewrite test intent during execution (-> revise docs first, then resume)
+- Mark a slice complete without evidence
+- Weaken a `THEN` to make progress look better
 
 ## Worker Types
 
@@ -86,100 +126,108 @@ All workers spawn with `isolation: "worktree"`.
 
 | Worker | Role | Constraint |
 |--------|------|-----------|
-| **Planner** | Write spec documents (req/design/tasks) | No code |
-| **Coder** | Implement + write test code | Scope-limited to assigned task |
-| **Tester** | Run verification, capture evidence | No code modification |
-| **Simplifier** | Refactor post-checkpoint | No behavior change |
+| **Planner** | Write `spec.md`, `requirements.md`, `design.md`, `tests.md` | No code |
+| **Coder** | Implement one `THEN` slice or a small balanced group | Scope-limited to assigned slice IDs |
+| **Tester** | Run slice verification and gold tests, capture evidence | No code modification |
+| **Simplifier** | Optional cleanup after checkpoint | No behavior change |
 
-See [orchestration.md](references/orchestration.md) for worker prompts and team flow.
+See [orchestration.md](references/orchestration.md) for worker prompts, batching rules, and review flow.
 
 ## Gold Test System
 
-Killer scenarios defined with the user during spec phase. Stored in `.xiro/{feature}/gold-tests.md`.
+Gold tests are the outer acceptance suite defined with the user during the spec phase. Stored in `.xiro/{feature}/gold-tests.md`.
 
 **Rules:**
 - 2-5 scenarios that prove the feature works end-to-end
-- Run at: checkpoint, simplify, phase boundary
+- Add-only across phases
+- Run at checkpoints, simplify boundaries, and phase boundaries
 - Failure = full stop, escalate to user
-- Phase progression: add-only (never delete gold tests)
-- User-requested tests → immediately add to gold-tests.md
+- User-requested acceptance tests -> immediately add to `gold-tests.md`
 
-See [verification.md](references/verification.md) for gold test format.
+Gold tests are not the daily progress unit. `THEN` slices are.
+
+See [verification.md](references/verification.md) for evidence and gold-test protocol.
 
 ## Git Protocol
 
-**Pre-flight:** Verify git repo exists. No repo → stop.
+**Pre-flight:** Verify git repo exists. No repo -> stop.
 
 | Item | Convention |
 |------|-----------|
 | Branch | `xiro/{feature-name}` |
 | Worker branches | Auto-created by worktree |
-| Commits | `xiro({phase}): {task-title}` |
+| Commits | `xiro({phase}): {scenario-id}/{then-id} {title}` |
 | Phase complete | Commit required |
 | Version pinning | No `latest`, `^`, `~` |
 
 ## Anti-Slop Policy
 
 Placeholders are AI slop. These are forbidden:
+
 - "Coming soon", "TODO: implement later"
 - Stub endpoints returning hardcoded data
 - Empty function bodies
 - "Example", "sample", "placeholder"
+- Fake progress that checks a box without satisfying a `THEN`
 
-If something isn't needed, omit it. If it's needed, implement it fully.
+If something is not needed, omit it. If it is needed, implement it fully.
 
 ## Adaptive Verification
 
-Don't verify what doesn't need verification. VERIFY only at:
-- Subtask completion (each subtask's VERIFY command)
-- Checkpoint (VERIFY_ALL + gold tests)
-- Post-simplify (regression guard)
+Verify only what the slice claims:
 
-No speculative verification. No verification theater.
+- Every `THEN` slice completion runs its own `VERIFY`
+- Checkpoints run scenario summaries plus gold tests
+- Simplify runs regression checks only
+
+No verification theater. No "task looks done". Evidence decides.
 
 ## Shared Knowledge
 
-Workers read project CLAUDE.md before starting. Gotchas discovered during work → append to `.xiro/{feature}/shared.md`.
+Workers read project instructions before starting. Gotchas discovered during work -> append to `.xiro/{feature}/shared.md`.
 
-Format: One-line facts. No prose.
+Format: one-line facts. No prose.
+
 ```
-- flutter analyze passes but build fails: always run both
-- supabase RLS requires service_role key for admin operations
+- flutter analyze passes but build fails: always verify both
+- counter widget uses semantics labels for test taps
+- API smoke tests require local postgres before pytest
 ```
 
 ## Phase Review Guide
 
-At checkpoint, provide a concrete review guide (not just "Phase N ready"):
+At checkpoint, provide a concrete review guide:
 
 1. List CANNOT_VERIFY items requiring human check
-2. List gold test results (pass/fail with evidence)
-3. Provide step-by-step manual test instructions
-4. Link to evidence files
+2. List gold test results
+3. Provide step-by-step manual test instructions for unresolved items
+4. Report progress by scenario and `THEN`
+5. Link to evidence files
 
-The orchestrator NEVER fixes code during review → spawn a fix Coder worker.
+The orchestrator never fixes code during review. Spawn a fix Coder worker.
 
 ## File Structure
 
 ```
 .xiro/{feature}/
-├── input.md                # Interview output
-├── spec-anchor.md          # Immutable 3-5 line summary
+├── project.md              # Init-project output
+├── spec.md                 # Source of truth + immutable summary section
 ├── gold-tests.md           # Killer scenarios (add-only)
 ├── shared.md               # Worker-shared gotchas
 ├── phases/
 │   ├── 1-{name}/
 │   │   ├── requirements.md
 │   │   ├── design.md
-│   │   └── tasks.md
+│   │   └── tests.md
 │   └── 2-{name}/...
 └── evidence/
-    ├── phase-1/task-1/...
+    ├── phase-1/slices/S1.T1/...
     ├── gold/...
     └── decisions.log
 ```
 
-## Spec Format References
+## Reference Guides
 
-- [spec-format.md](references/spec-format.md) — Requirements, design, tasks, gold test formats
-- [orchestration.md](references/orchestration.md) — Workers, teams, git, shared knowledge
-- [verification.md](references/verification.md) — HFP, VERIFY syntax, gold test protocol
+- [spec-format.md](references/spec-format.md) — `spec.md`, `requirements.md`, `design.md`, `tests.md`, `gold-tests.md`
+- [orchestration.md](references/orchestration.md) — workers, batching, git, review flow
+- [verification.md](references/verification.md) — VERIFY syntax, evidence, gold tests, environment patterns

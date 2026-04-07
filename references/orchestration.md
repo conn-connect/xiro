@@ -1,305 +1,249 @@
 # Orchestration Reference
 
-How xiro coordinates workers, manages execution, and maintains consistency.
+How xiro coordinates planners, coders, testers, and simplifiers in the BDD workflow.
+
+Xiro keeps the current worker model, but replaces `tasks.md` with `tests.md` and replaces broad task execution with `THEN`-slice execution.
 
 ---
 
 ## 1. Orchestrator Role
 
-The orchestrator (main session) is the MC — reviewer, coordinator, communicator. Never a builder.
+The orchestrator is the MC: reviewer, coordinator, and communicator. Never a builder.
 
 ### DO
-- Read specs and decide phase structure
-- Review worker outputs (specs, code, evidence)
-- Run VERIFY commands via Bash to confirm pass/fail
-- Enforce Honest Failure Protocol
-- Communicate with user at HITL checkpoints
-- Spawn, assign, review, merge, shut down workers
+
+- Read `spec.md`, phase `requirements.md`, `design.md`, and `tests.md`
+- Decide which `THEN` slices are ready to run
+- Group only genuinely independent, balanced slices for parallel execution
+- Review worker output and evidence
+- Run or delegate verification exactly as written in `tests.md`
+- Enforce evidence-based completion
+- Communicate with the user at review checkpoints
 
 ### NEVER
-- Write application code → spawn Coder
-- Write spec documents → spawn Planner
-- Refactor or clean up code → spawn Simplifier
-- Update task checkboxes → worker updates own tasks
-- Interpret failures optimistically → exit code is truth
+
+- Write application code
+- Write `spec.md`, `requirements.md`, `design.md`, or `tests.md` directly
+- Mark a slice complete without evidence
+- Reword a failing `THEN` into something easier
+- Report progress as "task complete" when only part of the scenario is proven
 
 ### Why
-The orchestrator's context stays clean: spec anchor + phase state + verification criteria. Workers hold implementation context. This separation prevents drift and keeps evaluation objective.
+
+The orchestrator keeps its context focused on:
+
+- scenario intent
+- slice readiness
+- evidence quality
+- review communication
+
+Workers carry implementation context. This separation reduces drift and makes status reporting honest.
 
 ---
 
 ## 2. Worker Types and Prompts
 
-All workers use `isolation: "worktree"` via the Task tool.
+All workers use `isolation: "worktree"`.
 
 ### Planner Worker
 
-Produces requirements.md, design.md, or tasks.md for a phase.
+Produces `spec.md`, `requirements.md`, `design.md`, or `tests.md`.
 
-```
+```text
 Tool: Task
 Parameters:
-  description: "Planner: Phase {N} {layer}"
+  description: "Planner: Phase {N} {document}"
   subagent_type: general-purpose
   isolation: worktree
   prompt: |
-    You are a Planner worker for xiro spec-driven development.
-    YOUR ROLE: Write {layer} for Phase {N}: {phase-name}.
-    You write specifications, NOT code.
-
-    ## Spec Anchor
-    {spec-anchor.md content}
-
-    ## Phase Scope
-    {what this phase covers, boundaries, dependencies}
+    You are a Planner worker for xiro.
+    YOUR ROLE: Write {document} for Phase {N}: {phase-name}.
+    You write documents, NOT product code.
 
     ## Input
-    {input.md content OR previous layer output}
-
-    ## Format Guide
-    {relevant section from spec-format.md}
+    {project.md content, spec.md content, or prior layer output}
 
     ## Rules
     - Follow the format guide exactly
-    - Every requirement needs VERIFY_BY classification
-    - Every subtask needs a concrete VERIFY command
-    - CANNOT_VERIFY declared here, not during execution
-    - Reference requirement IDs in design and tasks
+    - `requirements.md` must use `GIVEN / WHEN / THEN`
+    - Every `THEN` gets a stable ID
+    - `design.md` must map scenarios to components and automation strategy
+    - `tests.md` must create one executable slice per `THEN`
+    - Frontend slices must include explicit interaction steps
 
-    Write the document to: .xiro/{feature}/phases/{N}-{name}/{layer}.md
+    Write the document to:
+    .xiro/{feature}/phases/{N}-{name}/{document}
 ```
 
-For layer-parallel spec flow, spawn Planner workers for ALL phases simultaneously:
-- All requirements.md in parallel → HITL → All design.md in parallel → HITL → All tasks.md in parallel → HITL
+Layer-parallel flow:
+
+- all `requirements.md` in parallel -> HITL review
+- all `design.md` in parallel -> HITL review
+- all `tests.md` in parallel -> HITL review
 
 ### Coder Worker
 
-Implements tasks and writes test code.
+Implements one `THEN` slice or a small balanced batch.
 
-```
+```text
 Tool: Task
 Parameters:
-  description: "Coder: Task {N} [{phase}]"
+  description: "Coder: {slice-ids} [{phase}]"
   subagent_type: general-purpose
   isolation: worktree
   prompt: |
-    You are a Coder worker for xiro spec-driven development.
-    YOUR ROLE: Implement Task {N} and run VERIFY commands.
+    You are a Coder worker for xiro.
+    YOUR ROLE: Implement only the assigned slice IDs.
 
-    ## Spec Anchor
-    {spec-anchor.md content}
+    ## Spec Summary
+    {copied summary from spec.md}
 
     ## Shared Knowledge
-    {shared.md content — read this first for gotchas}
+    {shared.md content}
 
-    ## Task Assignment
-    {full task block from tasks.md with all subtasks and VERIFY}
+    ## Assigned Slices
+    {full slice blocks from tests.md}
+
+    ## Scenario Context
+    {relevant scenario blocks from requirements.md}
 
     ## Design Context
-    {relevant design.md excerpt}
+    {relevant design excerpt}
 
-    ## Anti-Slop Rules
-    - No placeholders, stubs, "coming soon", empty bodies
-    - If it's needed, implement it fully
-    - If it's not needed, don't create it
-
-    ## Working Rules
-    1. Read project CLAUDE.md first
-    2. Implement subtasks in order (N.1, N.2, ... N.T)
-    3. Run VERIFY after each subtask
-    4. If VERIFY fails: fix and retry (max 3 attempts)
-    5. After 3 failures: report FAIL with all evidence
-    6. N.T test subtask is MANDATORY
-    7. Do NOT modify files outside task scope
-    8. Do NOT weaken VERIFY commands
-    9. Add discovered gotchas to .xiro/{feature}/shared.md
-    10. Commit on completion: xiro({phase}): {task-title}
-
-    ## Report Format
-    TASK REPORT
-    Task: {N} — {title}
-    Status: PASS | FAIL
-
-    Subtask results:
-      {N}.1: PASS | FAIL (exit {code})
-      {N}.2: PASS | FAIL
-      {N}.T: PASS | FAIL ({M} tests)
-
-    Files modified:
-      - {path} (new|modified)
-
-    Gotchas discovered:
-      - {one-line fact, if any}
+    ## Rules
+    1. Implement only the assigned slices
+    2. Do not widen scope to "finish the feature"
+    3. Respect dependency order inside the batch
+    4. Keep behavior aligned with the exact THEN wording
+    5. Do not weaken VERIFY criteria
+    6. Append new gotchas to shared.md
+    7. Commit on completion: xiro({phase}): {scenario-id}/{then-id} {title}
 ```
 
 ### Tester Worker
 
 Runs verification independently. Never modifies code.
 
-```
+```text
 Tool: Task
 Parameters:
-  description: "Tester: Phase {P} verification"
+  description: "Tester: {slice-ids} [{phase}]"
   subagent_type: general-purpose
   isolation: worktree
   prompt: |
-    You are a Tester worker for xiro spec-driven development.
-    YOUR ROLE: Run verification commands and capture evidence. NO code changes.
+    You are a Tester worker for xiro.
+    YOUR ROLE: Run the exact verification steps for the assigned slices.
 
-    ## What to Verify
-    {list of VERIFY commands from completed tasks}
-
-    ## Gold Tests
-    {gold-tests.md content}
+    ## Assigned Slices
+    {slice blocks from tests.md}
 
     ## Rules
-    1. Run each VERIFY command exactly as written
-    2. Capture full stdout + stderr + exit code
-    3. Save evidence to .xiro/{feature}/evidence/
-    4. Run ALL gold tests
-    5. Do NOT modify any source code
-    6. Do NOT modify any test code
-    7. Report results honestly — exit code is truth
-
-    ## Evidence Format
-    Save to: .xiro/{feature}/evidence/phase-{P}/task-{N}/subtask-{N.M}.log
-
-    Content:
-    VERIFY: {exact command}
-    TIMESTAMP: {ISO 8601}
-    EXIT_CODE: {code}
-    RESULT: PASS | FAIL
-    ---
-    {full output}
-
-    ## Report Format
-    VERIFICATION REPORT
-    Phase: {P}
-    Scope: Tasks {X}-{Y} + Gold Tests
-
-    Results:
-      Task {X}: {M}/{M} subtasks PASS
-      Task {Y}: {M}/{M} subtasks PASS
-      Gold GT-1: PASS | FAIL
-      Gold GT-2: PASS | FAIL
-
-    Evidence: .xiro/{feature}/evidence/phase-{P}/
+    1. Run the VERIFY commands exactly as written
+    2. Capture stdout, stderr, exit code, and referenced artifacts
+    3. Save evidence under .xiro/{feature}/evidence/
+    4. Do not modify product code or test code
+    5. Report results by scenario and THEN ID
 ```
 
 ### Simplifier Worker
 
-Refactors code post-checkpoint. No behavior changes.
+Optional cleanup after a checkpoint. No behavior changes.
 
-```
+```text
 Tool: Task
 Parameters:
-  description: "Simplifier: Phase {P} tasks {X}-{Y}"
+  description: "Simplifier: Phase {P} checkpoint cleanup"
   subagent_type: general-purpose
   isolation: worktree
   prompt: |
-    You are a Simplifier worker for xiro spec-driven development.
-    YOUR ROLE: Clean up code from Tasks {X}-{Y}. NO behavior changes.
+    You are a Simplifier worker for xiro.
+    YOUR ROLE: Reduce duplication and improve clarity after the checkpoint.
 
-    ## Spec Anchor
-    {spec-anchor.md content}
+    ## Scope
+    {list of files modified by completed slices}
 
-    ## Files to Review
-    {aggregated list of modified files}
-
-    ## Look For
-    - Duplicated code → extract shared functions
-    - Poor naming → improve clarity
-    - Dead code → remove (unused imports, unreachable branches)
-    - Over-complexity → simplify without changing behavior
-    - Convention violations → align with project style
-
-    ## Do NOT
-    - Add features or functionality
-    - Change public APIs or interfaces
-    - Modify test assertions
-    - Remove error handling
-    - Change any observable behavior
-
-    ## Report Format
-    SIMPLIFIER REPORT
-    Scope: Tasks {X}-{Y}
-    Status: CHANGES_MADE | NO_CHANGES
-
-    Changes:
-      1. {file}: {what and why}
-      2. {file}: {what and why}
-
-    Behavioral impact: NONE
+    ## Rules
+    - No behavior change
+    - No public contract change
+    - No slice status changes
+    - Full regression must still pass after cleanup
 ```
 
 ---
 
 ## 3. Batch Execution Flow
 
-Complete sequence for `/xiro run` with multiple tasks.
+Complete sequence for `/xiro run` with multiple ready slices.
 
-```
+```text
 1. PLAN
-   a. Read spec-anchor.md
-   b. Read tasks.md → identify READY tasks
-   c. Build dependency graph
-   d. Group independent tasks for parallel execution
-   e. Log decision to decisions.log
+   a. Read spec.md summary
+   b. Read current phase requirements.md
+   c. Read current phase tests.md
+   d. Identify READY THEN slices by dependency status
+   e. Group only balanced, independent slices
+   f. Log the batching decision
 
-2. EXECUTE (per group)
-   For each task in group:
-     a. Re-read spec-anchor.md
-     b. Spawn Coder worker in worktree
-     c. Worker implements + verifies locally
-     d. Worker reports completion/failure
-   Wait for ALL workers in group.
+2. EXECUTE
+   For each slice or slice-group:
+     a. Re-read spec summary
+     b. Spawn Coder worker in a worktree
+     c. Worker implements only the assigned slice(s)
+     d. Worker reports changed files and scope notes
 
 3. MERGE
-   a. Merge worktrees to feature branch (sequential, by task number)
-   b. On conflict: check design.md ownership, or ask user
-   c. Dependency-first merge order
+   a. Merge worktrees back in dependency order
+   b. On conflict: prefer explicit ownership from design/tests docs, else ask the user
 
 4. VERIFY
    a. Spawn Tester worker
-   b. Run ALL completed task VERIFY commands on merged branch
-   c. Run ALL gold tests
-   d. PASS → continue | FAIL → escalate
+   b. Run the exact VERIFY commands from the completed slice blocks
+   c. Save evidence per slice
+   d. PASS -> continue
+   e. FAIL -> escalate honestly
 
-5. SIMPLIFY (at checkpoint)
-   a. Spawn Simplifier worker
-   b. After simplification → spawn Tester for regression check
-   c. Regression → revert simplification entirely
-   d. Clean → accept
+5. UPDATE
+   a. Mark each passing slice complete immediately in tests.md
+   b. Update scenario progress table
+   c. Append decisions to decisions.log
 
 6. CHECKPOINT
-   a. Re-read spec-anchor.md
-   b. Compile evidence summary
-   c. Generate phase review guide:
-      - CANNOT_VERIFY items + manual test steps
-      - Gold test results
-      - User-visible deliverables checklist
-   d. [HITL] Present to user
-   e. Log decision
+   a. Run gold tests if the checkpoint or phase boundary requires them
+   b. Compile scenario progress summary
+   c. Generate review guide with CANNOT_VERIFY items and manual steps
+   d. Present to user
 ```
 
 ### Parallelism Rules
 
-Tasks with no dependency edges between them run in parallel:
-```
-Task 2 (depends: 1), Task 3 (depends: 1) → parallel
-Task 4 (depends: 2, 3) → wait for both
+Parallel execution is allowed only when all of these are true:
+
+- slices have no dependency edges between them
+- slices have similar effort
+- slices touch disjoint or low-conflict areas
+- each slice still preserves one-to-one mapping to a `THEN`
+
+Example:
+
+```text
+S2.T1 depends on S1.T1
+S2.T2 depends on S1.T1
+S3.T1 depends on none
+
+Ready batch:
+- S2.T1 + S2.T2 only if they are both small and low-conflict
+- S3.T1 can run in parallel with either one
 ```
 
 ### Error Recovery
 
 | Situation | Action |
 |-----------|--------|
-| Worker fails after 3 attempts | Mark FAILED, escalate at checkpoint |
-| Merge conflict | Check design.md, else ask user |
-| Regression after merge | Revert merge, re-assign |
-| Simplifier regression | Revert all simplifier changes |
-| Gold test fails | Full stop, escalate to user |
-| Session interrupted | Resume: read spec-anchor + tasks.md + decisions.log |
+| Worker fails after 3 attempts | Mark slice FAILED and escalate |
+| Merge conflict | Check slice ownership in `design.md` and `tests.md`, else ask user |
+| Verification fails | Keep slice incomplete and report evidence |
+| Gold test fails | Full stop, escalate immediately |
+| Session interrupted | Resume by reading `spec.md`, current `tests.md`, decisions.log, shared.md |
 
 ---
 
@@ -308,142 +252,141 @@ Task 4 (depends: 2, 3) → wait for both
 ### Pre-flight
 
 Before any xiro operation:
-1. Verify git repo exists (not → stop with message)
-2. Verify clean working tree (or stash)
-3. Create feature branch: `xiro/{feature-name}`
+
+1. Verify git repo exists
+2. Verify the working tree is safe to use
+3. Create or switch to feature branch: `xiro/{feature-name}`
 
 ### Branch Strategy
 
-```
+```text
 main
-  └── xiro/{feature-name}          ← feature branch
-        ├── (worktree: coder-task-1)   ← auto by CC
-        ├── (worktree: coder-task-2)
-        └── (worktree: simplifier-1)
+  └── xiro/{feature-name}
+        ├── worktree: s1-t1
+        ├── worktree: s1-t2
+        └── worktree: simplify-phase-1
 ```
-
-Worktree branches are managed by Claude Code's `isolation: "worktree"`.
 
 ### Commit Convention
 
-```
-xiro({phase}): {task-title}
+```text
+xiro({phase}): {scenario-id}/{then-id} {title}
 ```
 
 Examples:
+
+```text
+xiro(counter): S1/T1 increment visible count
+xiro(counter): S3/T1 decrement above min
+xiro(profile): S5/T2 persist saved profile name
 ```
-xiro(backend): set up project structure
-xiro(backend): implement user model and migration
-xiro(frontend): add login form component
-```
 
-Commit after each task completion. Phase completion must have a commit.
-
-### Version Pinning
-
-Never use floating versions:
-- No `latest` tags in Docker
-- No `^` or `~` in package.json/pyproject.toml
-- Pin exact versions: `"react": "18.2.0"`, `fastapi==0.109.0`
+Commit after each verified slice or verified balanced batch.
 
 ---
 
 ## 5. Shared Knowledge Protocol
 
-### CLAUDE.md
+### Project Instructions
 
-Workers MUST read the project's CLAUDE.md (if exists) before starting any work. It contains project-specific conventions, tooling, and constraints.
+Workers must read the project's instruction file if it exists before starting work.
 
-### shared.md
+### `shared.md`
 
 Workers append gotchas discovered during implementation to `.xiro/{feature}/shared.md`.
 
-**Format**: One-line facts. No explanations, no prose.
+**Format:** one-line facts only.
 
 ```markdown
 # Shared Knowledge
 
-- flutter analyze passes but build fails on asset references
-- supabase RLS requires service_role key for admin ops
-- pytest-asyncio requires mode=auto in pyproject.toml
-- tailwind classes must be in safelist for dynamic generation
+- playwright selectors should use data-testid for counter controls
+- flutter integration tests rely on semantics labels, not visible text
+- local API requires seeded sqlite database before UI verification
 ```
 
-**Rules:**
-- Append-only during a phase
-- Read by every worker before starting
-- One fact per line, dash-prefixed
-- No duplicates — check before adding
+Rules:
+
+- append-only within a phase
+- no duplicates
+- no paragraphs
 
 ---
 
 ## 6. Context Recovery
 
-If a session is interrupted or context is compressed:
+If the session is interrupted or compacted:
 
-1. Read `.xiro/{feature}/spec-anchor.md` — restore goal
-2. Read current phase `tasks.md` — see progress
-3. Read `.xiro/{feature}/evidence/decisions.log` — understand past choices
-4. Read `.xiro/{feature}/shared.md` — recall gotchas
-5. Read last evidence files — determine resume point
+1. Read `.xiro/{feature}/spec.md`
+2. Read current phase `tests.md`
+3. Read `.xiro/{feature}/evidence/decisions.log`
+4. Read `.xiro/{feature}/shared.md`
+5. Read the last slice evidence directories
 
 ### Anti-Drift Timing
 
-Re-read spec-anchor.md before:
-- Spawning each worker batch
-- Each checkpoint evaluation
-- Deciding about a failure
-- Concluding any task batch
-- Presenting anything to user
+Re-read the `spec.md` summary before:
+
+- spawning each worker batch
+- deciding whether a slice is really done
+- evaluating a failed VERIFY
+- presenting checkpoint status
 
 ---
 
-## 7. Phase Review Guide Template
+## 7. Status and Review Guide
 
-At checkpoint, present this instead of bare "Phase N ready":
+`/xiro status` should report progress by scenario and slice:
+
+```text
+Phase: 1-counter
+Scenario S1: 2/2 THEN slices complete
+Scenario S2: 1/2 THEN slices complete
+Scenario S3: 0/1 THEN slices complete
+Gold tests: 1/3 passing
+```
+
+At checkpoint, present this instead of a vague readiness message:
 
 ```markdown
 ## Phase {N} Review Guide
 
+### Scenario Progress
+- S1: 2/2 complete
+- S2: 1/2 complete
+
 ### Automated Results
-- {X}/{Y} subtasks verified (Z%)
+- Verified slices: {X}/{Y}
 - Gold tests: {pass}/{total}
-- Evidence: .xiro/{feature}/evidence/phase-{N}/
+- Evidence: `.xiro/{feature}/evidence/phase-{N}/`
 
 ### Requires Human Verification
-1. **{CANNOT_VERIFY item}**
-   - What: {description}
-   - How: {step-by-step instructions}
-   - Why AI can't: {reason}
+1. {CANNOT_VERIFY item}
+   - What:
+   - How:
+   - Why AI cannot verify:
 
 ### Manual Test Checklist
-Based on gold tests and CANNOT_VERIFY items:
-- [ ] {specific action to perform}
-- [ ] {specific thing to observe}
-- [ ] {specific outcome to confirm}
+- [ ] {action} -> expect {outcome}
+- [ ] {action} -> expect {outcome}
 
 ### Deliverables
-- {user-visible output 1}
-- {user-visible output 2}
-
-### Options
-- [Approve] → proceed to phase {N+1}
-- [Fix] → specify what to fix
-- [Stop] → halt development
+- {user-visible capability}
+- {user-visible capability}
 ```
 
 ---
 
-## 8. Interview Flow
+## 8. Init-Project Flow
 
-For `/xiro interview`:
+For `/xiro init-project`:
 
 1. Ask about the problem being solved
-2. Ask about users and their needs
-3. Ask about functional requirements (what it should do)
-4. Ask about constraints (tech stack, deadlines, existing code)
-5. Ask about out-of-scope items (what it should NOT do)
-6. Ask about killer test scenarios (what proves it works?)
-7. Compile into `.xiro/{feature}/input.md`
+2. Ask who the users are
+3. Ask what must visibly work for those users
+4. Ask for candidate scenarios and high-value journeys
+5. Ask about constraints and out-of-scope items
+6. Ask what full business journey would convince the user the feature is done
+7. Compile the answers into `.xiro/{feature}/project.md`
 
-Use AskUserQuestion tool for structured questions. Maximum 3-4 rounds of questions before compiling.
+The init-project flow should collect scenario material, not just a feature wishlist.
