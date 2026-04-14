@@ -572,7 +572,7 @@ Gold test `VERIFY` commands run from the repo implied by the relevant bound slic
 
 ### Purpose
 
-`project.md` is the output of `/xiro init-project`. It captures raw user intent before scenario shaping and serves as the direct input to `/xiro spec`.
+`project.md` is the output of `/xiro new`. It captures raw user intent before scenario shaping and serves as the direct input to `/xiro spec`.
 
 ### Document Structure
 

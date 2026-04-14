@@ -2,19 +2,13 @@
 name: xiro
 description: |
   BDD-driven spec workflow with scenario-based requirements, THEN-slice execution,
-  gold tests, and worktree isolation. The orchestrator coordinates planners,
-  coders, testers, and simplifiers. It does not write product code or spec docs directly.
-  `.xiro` always lives in the current folder. Git branches and worktrees are created
-  only inside the repo bound to a slice when execution actually needs code changes.
-
-  Commands:
-  - `/xiro init-project`: Kickoff discovery, generates project.md with candidate scenarios
-  - `/xiro spec [name]`: Read project.md, then generate spec.md and per-phase requirements.md, design.md, tests.md
-  - `/xiro run [slice]`: Execute one ready THEN slice or a small balanced group of slices
-  - `/xiro status`: Progress overview by scenario and THEN slice, plus gold test results
-  - `/xiro test [name]`: Run scenario tests from tests.md or gold tests from gold-tests.md
-
-  Triggers: "xiro", "BDD", "scenario-driven development", "gold test", "spec-driven"
+  gold tests, and worktree isolation. `.xiro` lives in the current folder, while
+  git branches and worktrees are created only inside the repo bound to each slice.
+  Commands: `/xiro new`, `/xiro spec [name]`, `/xiro list`, `/xiro run [feature] [slice]`,
+  `/xiro status <feature>`, `/xiro test [feature] [name]`.
+  Triggers: xiro, BDD, scenario-driven development, gold test, spec-driven.
+metadata:
+  short-description: BDD spec workflow with workspace-level feature tracking
 ---
 
 # Xiro: BDD Spec-Driven Development
@@ -24,18 +18,19 @@ Xiro is a scenario-first development orchestrator. The main session (you) is the
 ## Core Loop
 
 ```
-init-project -> spec -> slice -> verify -> review
+new -> spec -> slice -> verify -> review
 ```
 
 ## Commands
 
 | Command | Action |
 |---------|--------|
-| `/xiro init-project` | Interactive kickoff in the current folder -> `.xiro/{feature}/project.md` |
+| `/xiro new` | Interactive kickoff in the current folder -> `.xiro/{feature}/project.md` |
 | `/xiro spec [name]` | Read `project.md`, then generate `spec.md` and per-phase `requirements.md`, `design.md`, `tests.md` |
-| `/xiro run [slice]` | Execute ready THEN slices from `tests.md`, binding a repo only when a slice needs code/test work |
-| `/xiro status` | Show scenario progress, slice status, repo bindings, and gold test results |
-| `/xiro test [name]` | Run named scenario/THEN slice tests, or all gold tests if no name is given |
+| `/xiro list` | List xiro features in the current workspace and show stage, progress, and repo binding summary |
+| `/xiro run [feature] [slice]` | Execute ready THEN slices for one feature, binding a repo only when a slice needs code/test work |
+| `/xiro status <feature>` | Show detailed phase, scenario, slice, and repo-binding status for one feature |
+| `/xiro test [feature] [name]` | Run tests for one feature using the same feature-resolution rules as `/xiro run` |
 
 ## Execution Context
 
@@ -45,6 +40,8 @@ Xiro separates the folder where planning state lives from the repo where code ch
 - **Repo root**: the git repository chosen for a specific slice when code changes, worktrees, or verification need a repo.
 
 The workspace root does not need to be a git repo. Repo binding is delayed until `/xiro run` or repo-backed `/xiro test`.
+
+Xiro may remember one active feature in the current session after `/xiro run` starts work. This is session memory only and is not written to `.xiro`.
 
 ## Document Model
 
@@ -86,7 +83,7 @@ Xiro uses five working documents plus the outer acceptance suite:
 All phases still share each review layer for cross-phase consistency, but the artifact set changes.
 
 ```
-1. READ project.md (missing -> suggest /xiro init-project)
+1. READ project.md (missing -> suggest /xiro new)
 2. WRITE spec.md from project.md -> [HITL] approve feature goal, constraints, phase split
 3. REQ: ALL phases' requirements.md in parallel -> [HITL] review scenario coverage
 4. DESIGN: ALL phases' design.md in parallel -> [HITL] review technical sufficiency
@@ -100,30 +97,60 @@ At review time:
 - `design.md`: Is the approach sufficient for these scenarios?
 - `tests.md`: Are the `THEN` slices small, balanced, and executable?
 
+## List Flow
+
+```
+/xiro list
+  1. Enumerate `.xiro/*` feature directories in the current workspace
+  2. For each feature, inspect project.md, spec.md, phases/, tests.md, and evidence
+  3. Derive feature stage and progress summary
+  4. Report all non-completed and completed features in one workspace-wide view
+```
+
+Feature stage meanings:
+
+- `new`: project.md exists but spec.md does not
+- `spec-ready`: discovery exists and the feature is ready for `/xiro spec`
+- `planned`: spec.md and phase docs exist but no ready slices are available yet
+- `ready-to-run`: at least one pending slice is runnable
+- `in-progress`: feature has pending work and is the active feature in the current session
+- `blocked`: pending work exists but no ready slices are currently runnable
+- `completed`: no pending slices remain and latest gold-test result is passing
+
 ## Run Flow
 
 ```
-/xiro run
-  1. Read spec.md summary (anti-drift)
-  2. Read current phase tests.md
-  3. Identify READY THEN slices (deps satisfied, not done)
-  4. Bind each ready slice to a repo
+/xiro run [feature] [slice]
+  1. Resolve the target feature
+     - if feature arg is present -> use it
+     - if only a slice arg is present and there is an active feature -> use the active feature
+     - if no args and the active feature is still incomplete -> continue it
+     - else if exactly one incomplete feature exists -> use it
+     - else if multiple incomplete features exist -> ask the user which feature to continue
+     - else -> stop and point the user to `/xiro list` or `/xiro new`
+  2. Read the target feature's spec.md summary
+  3. Read the target feature's current phase tests.md
+  4. If a slice arg is present, resolve that exact slice in the target feature
+  5. Otherwise identify READY THEN slices (deps satisfied, not done)
+  6. Bind each ready slice to a repo
      - if one plausible repo exists -> bind automatically
      - if several plausible repos exist -> ask the user
      - record the binding decision immediately
-  5. If 1 ready -> spawn solo Coder worker
+  7. Set the target feature as the active feature for the current session
+  8. If 1 ready -> spawn solo Coder worker
      If several small independent slices are ready -> spawn parallel Coder workers
-  6. After workers complete -> merge worktrees
-  7. Spawn Tester worker -> run exactly the matching VERIFY commands from tests.md in the bound repo root
-  8. Update slice status immediately with evidence links
-  9. At checkpoint or phase boundary -> run gold tests
-  10. [HITL] Present scenario progress, slice evidence, and review guide
+  9. After workers complete -> merge worktrees
+  10. Spawn Tester worker -> run exactly the matching VERIFY commands from tests.md in the bound repo root
+  11. Update slice status immediately with evidence links
+  12. At checkpoint or phase boundary -> run gold tests
+  13. [HITL] Present scenario progress, slice evidence, and review guide
 ```
 
 ## Orchestrator Rules
 
 **DO:**
 - Read `spec.md`, `requirements.md`, `design.md`, and `tests.md`
+- Resolve the target feature before reading phase docs or spawning workers
 - Judge whether a `THEN` slice is ready to run
 - Re-read the `spec.md` summary before every major decision
 - Present honest results to the user at checkpoints
@@ -182,7 +209,7 @@ See [verification.md](references/verification.md) for evidence and gold-test pro
 
 Rules:
 
-- `/xiro init-project`, `/xiro spec`, and `/xiro status` do not require the workspace root to be a git repo
+- `/xiro new`, `/xiro spec`, `/xiro list`, and `/xiro status <feature>` do not require the workspace root to be a git repo
 - Create or switch to `xiro/{feature-name}` only inside the repo bound to the slice being executed
 - If a later slice needs a different repo, bind that slice and create the same branch name there
 
@@ -236,7 +263,7 @@ The orchestrator never fixes code during review. Spawn a fix Coder worker.
 
 ```
 .xiro/{feature}/
-├── project.md              # Init-project output
+├── project.md              # New-command output
 ├── spec.md                 # Source of truth + immutable summary section
 ├── gold-tests.md           # Killer scenarios (add-only)
 ├── shared.md               # Worker-shared gotchas

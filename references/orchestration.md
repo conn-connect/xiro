@@ -3,6 +3,7 @@
 How xiro coordinates planners, coders, testers, and simplifiers in the BDD workflow.
 
 Xiro keeps the current worker model, but replaces `tasks.md` with `tests.md` and replaces broad task execution with `THEN`-slice execution.
+It also assumes one workspace may contain multiple xiro features.
 
 ---
 
@@ -49,6 +50,8 @@ Xiro uses two roots:
 - **Repo root**: the git repository chosen for a specific slice when code changes, worktrees, or repo-backed verification are needed.
 
 The workspace root does not need to be a git repo. Repo binding is delayed until execution.
+
+One feature may be active in the current session after `/xiro run` starts work. This active feature is session memory only and is never persisted to disk.
 
 ---
 
@@ -191,24 +194,34 @@ Parameters:
 
 ---
 
-## 3. Batch Execution Flow
+## 3. Feature Resolution and Batch Execution Flow
 
-Complete sequence for `/xiro run` with multiple ready slices.
+Feature resolution comes before slice planning.
 
 ```text
-1. PLAN
-   a. Read spec.md summary
-   b. Read current phase requirements.md
-   c. Read current phase tests.md
-   d. Identify READY THEN slices by dependency status
-   e. Bind each ready slice to a repo
+1. RESOLVE FEATURE
+   a. If `/xiro run <feature> <slice>` or `/xiro run <feature>` is used, take that feature directly
+   b. If only a slice arg is passed and there is an active feature, use the active feature
+   c. If `/xiro run` is used with no args and the active feature is incomplete, continue it
+   d. Else enumerate incomplete features in `.xiro/`
+   e. If exactly one incomplete feature exists, use it
+   f. If multiple incomplete features exist, ask the user which feature to continue
+   g. If no incomplete features exist, stop and direct the user to `/xiro list` or `/xiro new`
+
+2. PLAN
+   a. Read the chosen feature's spec.md summary
+   b. Read the chosen feature's current phase requirements.md
+   c. Read the chosen feature's current phase tests.md
+   d. If a slice arg was passed, resolve that exact slice in the chosen feature
+   e. Otherwise identify READY THEN slices by dependency status
+   f. Bind each ready slice to a repo
       - if one plausible repo exists, bind automatically
       - if several plausible repos exist, ask the user
       - if already bound, reuse the recorded repo
-   f. Group only balanced, independent slices
-   g. Log batching and repo-binding decisions
+   g. Group only balanced, independent slices
+   h. Log feature-selection, batching, and repo-binding decisions
 
-2. EXECUTE
+3. EXECUTE
    For each slice or slice-group:
      a. Re-read spec summary
      b. Create or switch to `xiro/{feature-name}` in the bound repo
@@ -216,29 +229,55 @@ Complete sequence for `/xiro run` with multiple ready slices.
      d. Worker implements only the assigned slice(s)
      e. Worker reports changed files and scope notes
 
-3. MERGE
+4. MERGE
    a. Merge worktrees back in dependency order
    b. On conflict: prefer explicit ownership from design/tests docs, else ask the user
 
-4. VERIFY
+5. VERIFY
    a. Spawn Tester worker
    b. Run the exact VERIFY commands from the completed slice blocks in the bound repo
    c. Save evidence per slice
    d. PASS -> continue
    e. FAIL -> escalate honestly
 
-5. UPDATE
+6. UPDATE
    a. Mark each passing slice complete immediately in tests.md
    b. Replace `Repo: auto` with the resolved repo path if the slice was auto-bound
    c. Update scenario progress table
    d. Append decisions to decisions.log
 
-6. CHECKPOINT
+7. CHECKPOINT
    a. Run gold tests if the checkpoint or phase boundary requires them
    b. Compile scenario progress summary
    c. Generate review guide with CANNOT_VERIFY items and manual steps
    d. Present to user
 ```
+
+### `/xiro list`
+
+`/xiro list` is the workspace-wide overview command.
+
+For each `.xiro/{feature}` directory:
+
+1. Read `project.md`, `spec.md`, phase docs, and latest evidence
+2. Derive:
+   - current stage
+   - current phase if known
+   - completed slices / total slices
+   - gold-test state if known
+   - repo binding summary from `tests.md`
+3. Present all features in one concise table
+
+### `/xiro status <feature>`
+
+`/xiro status <feature>` is feature-specific only.
+
+For the named feature:
+
+1. Read the feature's `spec.md`, current phase `tests.md`, `shared.md`, and evidence
+2. Show detailed per-scenario and per-slice progress
+3. Show repo bindings and gold-test state
+4. If the feature does not exist, report `feature not found`
 
 ### Parallelism Rules
 
@@ -277,7 +316,7 @@ Ready batch:
 
 ### Pre-flight
 
-Before `/xiro init-project`, `/xiro spec`, or `/xiro status`:
+Before `/xiro new`, `/xiro spec`, `/xiro list`, or `/xiro status <feature>`:
 
 1. Verify the current folder can host `.xiro`
 2. Create `.xiro/{feature}` under the current folder when needed
@@ -365,7 +404,8 @@ If the session is interrupted or compacted:
 3. Read `.xiro/{feature}/evidence/decisions.log`
 4. Read `.xiro/{feature}/shared.md`
 5. Reconstruct slice repo bindings from `Repo:` fields and decisions.log
-6. Read the last slice evidence directories
+6. If the current session has an active feature, prefer it for implicit `run`
+7. Read the last slice evidence directories
 
 ### Anti-Drift Timing
 
@@ -380,7 +420,15 @@ Re-read the `spec.md` summary before:
 
 ## 7. Status and Review Guide
 
-`/xiro status` should report progress by scenario and slice:
+`/xiro list` should report progress by feature:
+
+```text
+counter      in-progress   phase: 1-counter   slices: 3/5   gold: 1/2   repos: apps/counter
+profile      blocked       phase: 2-profile   slices: 4/9   gold: 0/2   repos: services/profile, apps/profile-web
+editor       completed     phase: 3-editor    slices: 8/8   gold: PASS  repos: apps/editor
+```
+
+`/xiro status <feature>` should report progress by scenario and slice:
 
 ```text
 Phase: 1-counter
@@ -424,9 +472,9 @@ At checkpoint, present this instead of a vague readiness message:
 
 ---
 
-## 8. Init-Project Flow
+## 8. New Flow
 
-For `/xiro init-project`:
+For `/xiro new`:
 
 1. Ask about the problem being solved
 2. Ask who the users are
@@ -436,5 +484,5 @@ For `/xiro init-project`:
 6. Ask what full business journey would convince the user the feature is done
 7. Compile the answers into `.xiro/{feature}/project.md`
 
-The init-project flow should collect scenario material, not just a feature wishlist.
+The new-command flow should collect scenario material, not just a feature wishlist.
 The file is written under the current folder, not under a detected git repo root.

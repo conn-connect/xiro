@@ -38,16 +38,17 @@ This keeps specs readable, execution concrete, and progress honest.
 
 | Command | Description |
 |---------|-------------|
-| `/xiro init-project` | Kickoff discovery in the current folder, generates `project.md` and candidate scenarios |
+| `/xiro new` | Kickoff discovery in the current folder, generates `project.md` and candidate scenarios |
 | `/xiro spec [name]` | Reads `project.md`, then generates `spec.md`, `requirements.md`, `design.md`, `tests.md` |
-| `/xiro run [slice]` | Executes one ready `THEN` slice or a small balanced batch, binding a repo only when needed |
-| `/xiro status` | Shows progress by scenario, `THEN`, repo binding, and gold test status |
-| `/xiro test [name]` | Runs named scenario tests from `tests.md`, or all gold tests if no name is given |
+| `/xiro list` | Lists xiro features in the current workspace and shows progress |
+| `/xiro run [feature] [slice]` | Executes one ready `THEN` slice or a small balanced batch for the chosen feature |
+| `/xiro status <feature>` | Shows detailed progress for one feature |
+| `/xiro test [feature] [name]` | Runs tests for one feature using the same feature-resolution rules as `run` |
 
 ## How It Works
 
 ```
-/xiro init-project
+/xiro new
         |
         v
   project.md
@@ -67,14 +68,17 @@ This keeps specs readable, execution concrete, and progress honest.
         v
 /xiro run
         |
-  1. Identify ready THEN slices from tests.md
-  2. Bind each slice to a repo (`auto` if one candidate, ask if ambiguous)
-  3. Spawn Coder worker(s) for one slice each
-  4. Merge worktrees
-  5. Spawn Tester worker for exact slice verification in the bound repo
-  6. Update progress immediately by scenario / THEN
-  7. Run gold tests at checkpoints and phase boundaries
+  1. Resolve which feature to operate on
+  2. Identify ready THEN slices from that feature's tests.md
+  3. Bind each slice to a repo (`auto` if one candidate, ask if ambiguous)
+  4. Spawn Coder worker(s) for one slice each
+  5. Merge worktrees
+  6. Spawn Tester worker for exact slice verification in the bound repo
+  7. Update progress immediately by feature / scenario / THEN
+  8. Run gold tests at checkpoints and phase boundaries
 ```
+
+If the workspace has multiple incomplete xiro features, `/xiro run` without a feature name must ask which feature to continue before any work begins.
 
 ## BDD Model
 
@@ -225,6 +229,12 @@ When you use xiro, it creates:
 ```
 
 That `.xiro` tree is always created in the current folder where xiro was started, even if that folder only contains multiple git repos.
+
+When more than one feature exists in that workspace:
+
+- use `/xiro list` to see all features and their progress
+- use `/xiro status <feature>` for one feature's detailed state
+- use `/xiro run <feature>` to avoid ambiguous execution
 
 ## Reference Guides
 

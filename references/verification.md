@@ -165,7 +165,7 @@ REPO: {workspace-relative path if repo binding changed}
 | Checkpoint | Yes | Block progress |
 | Post-simplify | Yes | Revert or fix simplify pass |
 | Phase boundary | Yes | Block next phase |
-| `/xiro test` with no name | Yes | Report to user |
+| `/xiro test` with no name | Yes | Resolve feature first, then report to user |
 
 ### Execution Protocol
 
