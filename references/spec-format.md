@@ -282,6 +282,11 @@ Possible cleanup after scenario checkpoints.
 
 Each entry maps to one `THEN` slice. The document must be executable, not aspirational.
 
+`tests.md` also carries repo binding state for execution:
+
+- `Repo: auto` means xiro will choose a repo later
+- `Repo: {path}` means the slice is already bound to that repo path relative to the workspace root
+
 ### Document Structure
 
 ```markdown
@@ -307,6 +312,7 @@ Each entry maps to one `THEN` slice. The document must be executable, not aspira
 - [ ] S1.T1 {slice title}
   - Scenario: S1
   - Goal: {user-visible outcome}
+  - Repo: auto
   - Depends: none
   - Surface: web-ui
   - Setup:
@@ -339,14 +345,15 @@ Every slice entry must include:
 
 1. Scenario ID / THEN ID
 2. Goal in user-visible language
-3. Dependencies on earlier slices
-4. Target surface (`web-ui`, `flutter-ui`, `api`, `cli`, etc.)
-5. Setup command(s)
-6. Execution method
-7. Explicit interaction steps
-8. Assertions / expected outcomes
-9. Evidence command or artifact path
-10. Status checkbox
+3. Repo binding (`auto` or a workspace-relative repo path)
+4. Dependencies on earlier slices
+5. Target surface (`web-ui`, `flutter-ui`, `api`, `cli`, etc.)
+6. Setup command(s)
+7. Execution method
+8. Explicit interaction steps
+9. Assertions / expected outcomes
+10. Evidence command or artifact path
+11. Status checkbox
 
 ### Slice Rules
 
@@ -355,6 +362,7 @@ Every slice entry must include:
 - Do not create vague entries such as "implement counter page"
 - Batching is an orchestration optimization, not an authoring excuse
 - Frontend entries must include explicit interaction steps, not just assertions
+- `Setup` and `VERIFY` commands run from the slice's bound repo root, not from the workspace root
 
 ### Counter Example
 
@@ -362,6 +370,7 @@ Every slice entry must include:
 - [ ] S1.T1 Increment under max bound
   - Scenario: S1
   - Goal: User sees `41` become `42`
+  - Repo: apps/counter
   - Depends: none
   - Surface: web-ui
   - Setup:
@@ -381,6 +390,7 @@ Every slice entry must include:
 - [ ] S3.T1 Decrement above min bound
   - Scenario: S3
   - Goal: User sees `10` become `9`
+  - Repo: apps/counter
   - Depends: none
   - Surface: web-ui
   - Setup:
@@ -403,6 +413,7 @@ Every slice entry must include:
 - [ ] S5.T2 Save button persists changes
   - Scenario: S5
   - Goal: User sees saved content after reload
+  - Repo: apps/profile-web
   - Depends: S5.T1
   - Surface: web-ui
   - Setup:
@@ -427,6 +438,7 @@ Every slice entry must include:
 - [ ] S8.T1 Tap increment FAB in Flutter
   - Scenario: S8
   - Goal: User sees `0` become `1`
+  - Repo: apps/flutter-counter
   - Depends: none
   - Surface: flutter-ui
   - Setup:
@@ -449,6 +461,7 @@ Every slice entry must include:
 - [ ] S7.T1 Reproduce missing warning bug
   - Scenario: S7
   - Goal: Capture the current broken behavior honestly
+  - Repo: apps/editor
   - Depends: none
   - Surface: web-ui
   - Setup:
@@ -466,6 +479,7 @@ Every slice entry must include:
 - [ ] S7.T2 Warning returns after fix
   - Scenario: S7
   - Goal: Show the fix works
+  - Repo: apps/editor
   - Depends: S7.T1
   - Surface: web-ui
   - Setup:
@@ -481,6 +495,7 @@ Every slice entry must include:
 - [ ] S7.T3 Save flow still works
   - Scenario: S7
   - Goal: Guard unchanged behavior
+  - Repo: apps/editor
   - Depends: S7.T2
   - Surface: web-ui
   - Setup:
@@ -548,6 +563,8 @@ Every slice entry must include:
 3. New phases may add tests but never weaken or delete old ones
 4. Run gold tests at checkpoints, simplify boundaries, and phase boundaries
 5. Failure halts progress and escalates immediately
+
+Gold test `VERIFY` commands run from the repo implied by the relevant bound slices. If that is ambiguous, resolve the repo before execution and log the decision.
 
 ---
 

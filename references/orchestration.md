@@ -41,6 +41,17 @@ Workers carry implementation context. This separation reduces drift and makes st
 
 ---
 
+## 1.5 Execution Context
+
+Xiro uses two roots:
+
+- **Workspace root**: the current folder where `/xiro` started. `.xiro/{feature}/...` lives here.
+- **Repo root**: the git repository chosen for a specific slice when code changes, worktrees, or repo-backed verification are needed.
+
+The workspace root does not need to be a git repo. Repo binding is delayed until execution.
+
+---
+
 ## 2. Worker Types and Prompts
 
 All workers use `isolation: "worktree"`.
@@ -69,6 +80,7 @@ Parameters:
     - Every `THEN` gets a stable ID
     - `design.md` must map scenarios to components and automation strategy
     - `tests.md` must create one executable slice per `THEN`
+    - Every slice must declare `Repo: auto` unless a repo is already known
     - Frontend slices must include explicit interaction steps
 
     Write the document to:
@@ -104,6 +116,9 @@ Parameters:
     ## Assigned Slices
     {full slice blocks from tests.md}
 
+    ## Bound Repo Root
+    {repo path chosen for this slice}
+
     ## Scenario Context
     {relevant scenario blocks from requirements.md}
 
@@ -117,7 +132,8 @@ Parameters:
     4. Keep behavior aligned with the exact THEN wording
     5. Do not weaken VERIFY criteria
     6. Append new gotchas to shared.md
-    7. Commit on completion: xiro({phase}): {scenario-id}/{then-id} {title}
+    7. Work only inside the bound repo root
+    8. Commit on completion: xiro({phase}): {scenario-id}/{then-id} {title}
 ```
 
 ### Tester Worker
@@ -137,12 +153,16 @@ Parameters:
     ## Assigned Slices
     {slice blocks from tests.md}
 
+    ## Bound Repo Root
+    {repo path chosen for this slice or gold test}
+
     ## Rules
     1. Run the VERIFY commands exactly as written
     2. Capture stdout, stderr, exit code, and referenced artifacts
-    3. Save evidence under .xiro/{feature}/evidence/
-    4. Do not modify product code or test code
-    5. Report results by scenario and THEN ID
+    3. Run repo-backed commands from the bound repo root
+    4. Save evidence under .xiro/{feature}/evidence/
+    5. Do not modify product code or test code
+    6. Report results by scenario and THEN ID
 ```
 
 ### Simplifier Worker
@@ -181,15 +201,20 @@ Complete sequence for `/xiro run` with multiple ready slices.
    b. Read current phase requirements.md
    c. Read current phase tests.md
    d. Identify READY THEN slices by dependency status
-   e. Group only balanced, independent slices
-   f. Log the batching decision
+   e. Bind each ready slice to a repo
+      - if one plausible repo exists, bind automatically
+      - if several plausible repos exist, ask the user
+      - if already bound, reuse the recorded repo
+   f. Group only balanced, independent slices
+   g. Log batching and repo-binding decisions
 
 2. EXECUTE
    For each slice or slice-group:
      a. Re-read spec summary
-     b. Spawn Coder worker in a worktree
-     c. Worker implements only the assigned slice(s)
-     d. Worker reports changed files and scope notes
+     b. Create or switch to `xiro/{feature-name}` in the bound repo
+     c. Spawn Coder worker in a worktree from the bound repo
+     d. Worker implements only the assigned slice(s)
+     e. Worker reports changed files and scope notes
 
 3. MERGE
    a. Merge worktrees back in dependency order
@@ -197,15 +222,16 @@ Complete sequence for `/xiro run` with multiple ready slices.
 
 4. VERIFY
    a. Spawn Tester worker
-   b. Run the exact VERIFY commands from the completed slice blocks
+   b. Run the exact VERIFY commands from the completed slice blocks in the bound repo
    c. Save evidence per slice
    d. PASS -> continue
    e. FAIL -> escalate honestly
 
 5. UPDATE
    a. Mark each passing slice complete immediately in tests.md
-   b. Update scenario progress table
-   c. Append decisions to decisions.log
+   b. Replace `Repo: auto` with the resolved repo path if the slice was auto-bound
+   c. Update scenario progress table
+   d. Append decisions to decisions.log
 
 6. CHECKPOINT
    a. Run gold tests if the checkpoint or phase boundary requires them
@@ -251,20 +277,29 @@ Ready batch:
 
 ### Pre-flight
 
-Before any xiro operation:
+Before `/xiro init-project`, `/xiro spec`, or `/xiro status`:
 
-1. Verify git repo exists
-2. Verify the working tree is safe to use
-3. Create or switch to feature branch: `xiro/{feature-name}`
+1. Verify the current folder can host `.xiro`
+2. Create `.xiro/{feature}` under the current folder when needed
+
+Before `/xiro run` or repo-backed `/xiro test`:
+
+1. Resolve the slice or gold test to a repo
+2. Verify the repo working tree is safe to use
+3. Create or switch to feature branch: `xiro/{feature-name}` inside that repo
 
 ### Branch Strategy
 
 ```text
-main
-  └── xiro/{feature-name}
-        ├── worktree: s1-t1
-        ├── worktree: s1-t2
-        └── worktree: simplify-phase-1
+workspace-root/
+  ├── .xiro/{feature}/...
+  ├── repo-a/
+  |    └── xiro/{feature-name}
+  |          ├── worktree: s1-t1
+  |          └── worktree: simplify-phase-1
+  └── repo-b/
+       └── xiro/{feature-name}
+             └── worktree: s3-t2
 ```
 
 ### Commit Convention
@@ -282,6 +317,14 @@ xiro(profile): S5/T2 persist saved profile name
 ```
 
 Commit after each verified slice or verified balanced batch.
+
+### Repo Binding Policy
+
+- `Repo: auto` means the slice is not bound yet
+- If exactly one plausible repo matches, bind automatically
+- If multiple plausible repos match, ask the user before execution
+- Record bindings in `tests.md` and `decisions.log`
+- Reuse the same binding on later runs unless the user explicitly changes it
 
 ---
 
@@ -321,7 +364,8 @@ If the session is interrupted or compacted:
 2. Read current phase `tests.md`
 3. Read `.xiro/{feature}/evidence/decisions.log`
 4. Read `.xiro/{feature}/shared.md`
-5. Read the last slice evidence directories
+5. Reconstruct slice repo bindings from `Repo:` fields and decisions.log
+6. Read the last slice evidence directories
 
 ### Anti-Drift Timing
 
@@ -340,9 +384,9 @@ Re-read the `spec.md` summary before:
 
 ```text
 Phase: 1-counter
-Scenario S1: 2/2 THEN slices complete
-Scenario S2: 1/2 THEN slices complete
-Scenario S3: 0/1 THEN slices complete
+Scenario S1: 2/2 THEN slices complete (repo: apps/counter)
+Scenario S2: 1/2 THEN slices complete (repo: auto)
+Scenario S3: 0/1 THEN slices complete (repo: services/profile)
 Gold tests: 1/3 passing
 ```
 
@@ -359,6 +403,9 @@ At checkpoint, present this instead of a vague readiness message:
 - Verified slices: {X}/{Y}
 - Gold tests: {pass}/{total}
 - Evidence: `.xiro/{feature}/evidence/phase-{N}/`
+- Repo bindings:
+  - S1.T1 -> {repo-path}
+  - S2.T1 -> auto
 
 ### Requires Human Verification
 1. {CANNOT_VERIFY item}
@@ -390,3 +437,4 @@ For `/xiro init-project`:
 7. Compile the answers into `.xiro/{feature}/project.md`
 
 The init-project flow should collect scenario material, not just a feature wishlist.
+The file is written under the current folder, not under a detected git repo root.

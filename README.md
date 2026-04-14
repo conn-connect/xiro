@@ -17,6 +17,12 @@ The core idea is simple:
 - `tests.md` is the execution document, where each entry maps to one `THEN` slice
 - `gold-tests.md` remains the outer acceptance suite
 
+Xiro now supports starting from a parent workspace folder that is not itself a git repo:
+
+- `.xiro` is always created in the current folder where you started xiro
+- repo selection is delayed until a slice actually needs code changes or repo-backed verification
+- each slice records its bound repo with `Repo: auto` or `Repo: path/to/repo`
+
 ## Philosophy
 
 Xiro is no longer task-first. It is scenario-first.
@@ -32,10 +38,10 @@ This keeps specs readable, execution concrete, and progress honest.
 
 | Command | Description |
 |---------|-------------|
-| `/xiro init-project` | Kickoff discovery, generates `project.md` and candidate scenarios |
+| `/xiro init-project` | Kickoff discovery in the current folder, generates `project.md` and candidate scenarios |
 | `/xiro spec [name]` | Reads `project.md`, then generates `spec.md`, `requirements.md`, `design.md`, `tests.md` |
-| `/xiro run [slice]` | Executes one ready `THEN` slice or a small balanced batch |
-| `/xiro status` | Shows progress by scenario and `THEN`, plus gold test status |
+| `/xiro run [slice]` | Executes one ready `THEN` slice or a small balanced batch, binding a repo only when needed |
+| `/xiro status` | Shows progress by scenario, `THEN`, repo binding, and gold test status |
 | `/xiro test [name]` | Runs named scenario tests from `tests.md`, or all gold tests if no name is given |
 
 ## How It Works
@@ -62,11 +68,12 @@ This keeps specs readable, execution concrete, and progress honest.
 /xiro run
         |
   1. Identify ready THEN slices from tests.md
-  2. Spawn Coder worker(s) for one slice each
-  3. Merge worktrees
-  4. Spawn Tester worker for exact slice verification
-  5. Update progress immediately by scenario / THEN
-  6. Run gold tests at checkpoints and phase boundaries
+  2. Bind each slice to a repo (`auto` if one candidate, ask if ambiguous)
+  3. Spawn Coder worker(s) for one slice each
+  4. Merge worktrees
+  5. Spawn Tester worker for exact slice verification in the bound repo
+  6. Update progress immediately by scenario / THEN
+  7. Run gold tests at checkpoints and phase boundaries
 ```
 
 ## BDD Model
@@ -103,6 +110,7 @@ Each entry must include:
 
 - Scenario ID / THEN ID
 - User-visible goal
+- Repo binding (`auto` until execution binds it)
 - Dependencies on earlier slices
 - Target surface (`web-ui`, `flutter-ui`, `api`, `cli`, etc.)
 - Setup command(s)
@@ -118,6 +126,7 @@ Each entry must include:
 - [ ] S2.T1 Increment button increases the visible count
   - Scenario: S2
   - Goal: User sees the counter go from `41` to `42`
+  - Repo: apps/counter
   - Depends: none
   - Surface: web-ui
   - Setup:
@@ -141,6 +150,7 @@ Each entry must include:
 - [ ] S3.T1 Minus button decreases the value on tap
   - Scenario: S3
   - Goal: User sees `10` become `9`
+  - Repo: apps/counter
   - Depends: none
   - Surface: flutter-ui
   - Setup:
@@ -214,6 +224,8 @@ When you use xiro, it creates:
     └── gold/gt-1.log
 ```
 
+That `.xiro` tree is always created in the current folder where xiro was started, even if that folder only contains multiple git repos.
+
 ## Reference Guides
 
 - [spec-format.md](references/spec-format.md) — canonical formats and examples for `spec.md`, `requirements.md`, `design.md`, `tests.md`, `gold-tests.md`
@@ -240,6 +252,8 @@ ln -s ~/xiro ~/.claude/skills/xiro
 - Git
 - A shell environment that can run the project test/build commands
 - A coding agent environment that supports worktree isolation and worker delegation
+
+Git is required for repo-backed execution. Discovery and spec authoring can start from a non-git parent workspace.
 
 ## License
 

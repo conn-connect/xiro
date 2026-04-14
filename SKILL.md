@@ -4,6 +4,8 @@ description: |
   BDD-driven spec workflow with scenario-based requirements, THEN-slice execution,
   gold tests, and worktree isolation. The orchestrator coordinates planners,
   coders, testers, and simplifiers. It does not write product code or spec docs directly.
+  `.xiro` always lives in the current folder. Git branches and worktrees are created
+  only inside the repo bound to a slice when execution actually needs code changes.
 
   Commands:
   - `/xiro init-project`: Kickoff discovery, generates project.md with candidate scenarios
@@ -29,11 +31,20 @@ init-project -> spec -> slice -> verify -> review
 
 | Command | Action |
 |---------|--------|
-| `/xiro init-project` | Interactive kickoff and requirements discovery -> `.xiro/{feature}/project.md` |
+| `/xiro init-project` | Interactive kickoff in the current folder -> `.xiro/{feature}/project.md` |
 | `/xiro spec [name]` | Read `project.md`, then generate `spec.md` and per-phase `requirements.md`, `design.md`, `tests.md` |
-| `/xiro run [slice]` | Execute ready THEN slices from `tests.md`. Optional slice ID targets a specific slice |
-| `/xiro status` | Show scenario progress, slice status, and gold test results |
+| `/xiro run [slice]` | Execute ready THEN slices from `tests.md`, binding a repo only when a slice needs code/test work |
+| `/xiro status` | Show scenario progress, slice status, repo bindings, and gold test results |
 | `/xiro test [name]` | Run named scenario/THEN slice tests, or all gold tests if no name is given |
+
+## Execution Context
+
+Xiro separates the folder where planning state lives from the repo where code changes happen.
+
+- **Workspace root**: the current folder where `/xiro` was started. This is where `.xiro/{feature}/...` is created.
+- **Repo root**: the git repository chosen for a specific slice when code changes, worktrees, or verification need a repo.
+
+The workspace root does not need to be a git repo. Repo binding is delayed until `/xiro run` or repo-backed `/xiro test`.
 
 ## Document Model
 
@@ -61,6 +72,7 @@ Xiro uses five working documents plus the outer acceptance suite:
 - The default progress unit is the `THEN`
 - Oversized `THEN`s must be split during authoring, not during implementation
 - Adjacent small `THEN`s may run in one batch only if the effort is balanced and the write scopes do not collide
+- Each slice declares a `Repo:` field. Default is `auto` until xiro binds the slice to a real repo path
 
 ### Frontend verification
 
@@ -95,13 +107,17 @@ At review time:
   1. Read spec.md summary (anti-drift)
   2. Read current phase tests.md
   3. Identify READY THEN slices (deps satisfied, not done)
-  4. If 1 ready -> spawn solo Coder worker
+  4. Bind each ready slice to a repo
+     - if one plausible repo exists -> bind automatically
+     - if several plausible repos exist -> ask the user
+     - record the binding decision immediately
+  5. If 1 ready -> spawn solo Coder worker
      If several small independent slices are ready -> spawn parallel Coder workers
-  5. After workers complete -> merge worktrees
-  6. Spawn Tester worker -> run exactly the matching VERIFY commands from tests.md
-  7. Update slice status immediately with evidence links
-  8. At checkpoint or phase boundary -> run gold tests
-  9. [HITL] Present scenario progress, slice evidence, and review guide
+  6. After workers complete -> merge worktrees
+  7. Spawn Tester worker -> run exactly the matching VERIFY commands from tests.md in the bound repo root
+  8. Update slice status immediately with evidence links
+  9. At checkpoint or phase boundary -> run gold tests
+  10. [HITL] Present scenario progress, slice evidence, and review guide
 ```
 
 ## Orchestrator Rules
@@ -112,6 +128,7 @@ At review time:
 - Re-read the `spec.md` summary before every major decision
 - Present honest results to the user at checkpoints
 - Log decisions to `.xiro/{feature}/evidence/decisions.log`
+- Log repo binding decisions before spawning repo-backed workers
 
 **NEVER:**
 - Write application code (-> Coder)
@@ -150,15 +167,24 @@ See [verification.md](references/verification.md) for evidence and gold-test pro
 
 ## Git Protocol
 
-**Pre-flight:** Verify git repo exists. No repo -> stop.
+**Workspace pre-flight:** Verify the current folder can host `.xiro`.
+
+**Repo pre-flight:** Only for `/xiro run` and repo-backed `/xiro test`.
 
 | Item | Convention |
 |------|-----------|
 | Branch | `xiro/{feature-name}` |
-| Worker branches | Auto-created by worktree |
+| Repo selection | Default `auto`; single plausible repo -> bind automatically, otherwise ask the user |
+| Worker branches | Auto-created by worktree inside the bound repo |
 | Commits | `xiro({phase}): {scenario-id}/{then-id} {title}` |
 | Phase complete | Commit required |
 | Version pinning | No `latest`, `^`, `~` |
+
+Rules:
+
+- `/xiro init-project`, `/xiro spec`, and `/xiro status` do not require the workspace root to be a git repo
+- Create or switch to `xiro/{feature-name}` only inside the repo bound to the slice being executed
+- If a later slice needs a different repo, bind that slice and create the same branch name there
 
 ## Anti-Slop Policy
 
@@ -225,6 +251,8 @@ The orchestrator never fixes code during review. Spawn a fix Coder worker.
     ├── gold/...
     └── decisions.log
 ```
+
+This tree is created under the current folder where xiro started, even when that folder is just a parent workspace that contains multiple repos.
 
 ## Reference Guides
 

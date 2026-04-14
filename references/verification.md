@@ -72,7 +72,7 @@ Three honest attempts, then stop and escalate.
 ### Rules
 
 1. Deterministic: same code should produce the same result
-2. Self-contained: runnable from project root with declared setup
+2. Self-contained: runnable from the slice's bound repo root with declared setup
 3. Specific: must be an executable command with a clear success condition
 4. Slice-scoped: the command must prove the assigned `THEN`, not the whole universe
 
@@ -82,6 +82,7 @@ Three honest attempts, then stop and escalate.
 - [ ] S1.T1 Increment visible count
   - Scenario: S1
   - Goal: User sees `41` become `42`
+  - Repo: apps/counter
   - Surface: web-ui
   - Method: Playwright
   - Steps:
@@ -136,6 +137,7 @@ Append-only:
 [{ISO 8601}] DECISION: {what changed or was approved}
 REASON: {why}
 SCOPED_TO: {phase, scenario, or slice}
+REPO: {workspace-relative path if repo binding changed}
 ```
 
 ### Slice Summary Format
@@ -170,9 +172,10 @@ SCOPED_TO: {phase, scenario, or slice}
 ```text
 1. Read .xiro/{feature}/gold-tests.md
 2. For each GT-N:
-   a. Run VERIFY command exactly as written
-   b. Capture output to .xiro/{feature}/evidence/gold/gt-{N}.log
-   c. Check exit code honestly
+   a. Resolve the repo from the related slice bindings or ask if ambiguous
+   b. Run VERIFY command exactly as written from that repo root
+   c. Capture output to .xiro/{feature}/evidence/gold/gt-{N}.log
+   d. Check exit code honestly
 3. Compile results:
    Gold Tests: {pass}/{total}
    GT-1: PASS | FAIL
@@ -258,6 +261,8 @@ Standard patterns to use when writing `tests.md`.
 | Steps | open page -> click control -> observe visible UI |
 | VERIFY | `npx playwright test ... --grep "{slice-id}"` exits 0 |
 
+Run commands from the slice's bound repo root.
+
 Use explicit steps like:
 
 ```markdown
@@ -279,6 +284,8 @@ Assertions:
 | Steps | launch app -> tap widget by semantics label -> observe visible state |
 | VERIFY | `flutter test integration_test/... --plain-name "{slice-id}"` exits 0 |
 
+Run commands from the slice's bound repo root.
+
 Use explicit steps like:
 
 ```markdown
@@ -299,6 +306,8 @@ Assertions:
 | Method | pytest, curl, or integration suite |
 | Steps | create request preconditions -> send request -> assert response/state |
 | VERIFY | `pytest tests/api/test_counter.py -k "{slice-id}"` exits 0 |
+
+Run commands from the slice's bound repo root.
 
 ### HITL Fallback
 
