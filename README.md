@@ -1,212 +1,37 @@
 # Xiro
 
-**BDD-driven spec workflow with scenario-based requirements, `THEN`-slice execution, gold tests, and worktree isolation.**
+Xiro is a scenario-driven development skill. It helps you turn a rough idea into a scoped project contract, concrete user journeys, implementation slices, and honest acceptance evidence.
 
-Xiro keeps the current lightweight skill structure, but changes the working model from `requirements -> design -> tasks` to:
-
-```
-project -> spec -> requirements -> design -> tests
-```
-
-The core idea is simple:
-
-- `project.md` is the kickoff discovery brief and input to `/xiro spec`
-- `spec.md` defines the feature, phases, and critical constraints
-- `requirements.md` captures user-visible scenarios in `GIVEN / WHEN / THEN`
-- `design.md` explains the technical approach needed to satisfy those scenarios
-- `tests.md` is the execution document, where each entry maps to one `THEN` slice
-- `gold-tests.md` remains the outer acceptance suite
-
-Xiro now supports starting from a parent workspace folder that is not itself a git repo:
-
-- `.xiro` is always created in the current folder where you started xiro
-- repo selection is delayed until a slice actually needs code changes or repo-backed verification
-- each slice records its bound repo with `Repo: auto` or `Repo: path/to/repo`
-
-## Philosophy
-
-Xiro is no longer task-first. It is scenario-first.
-
-- Progress is measured by `THEN`, not by broad implementation tasks
-- A `THEN` must describe an observable user outcome
-- `tests.md` must say exactly how to verify each `THEN`
-- Gold tests validate full business journeys across scenarios
-
-This keeps specs readable, execution concrete, and progress honest.
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `/xiro new` | Kickoff discovery in the current folder, generates `project.md` and candidate scenarios |
-| `/xiro spec [name]` | Reads `project.md`, then generates `spec.md`, `requirements.md`, `design.md`, `tests.md` |
-| `/xiro list` | Lists xiro features in the current workspace and shows progress |
-| `/xiro run [feature] [slice]` | Executes one ready `THEN` slice or a small balanced batch for the chosen feature |
-| `/xiro status <feature>` | Shows detailed progress for one feature |
-| `/xiro test [feature] [name]` | Runs tests for one feature using the same feature-resolution rules as `run` |
-
-## How It Works
-
-```
-/xiro new
-        |
-        v
-  project.md
-        |
-        v
-/xiro spec
-        |
-  spec.md (from project.md) -> [HITL] feature goal / constraints / phase split
-        |
-  Layer-parallel phase documents:
-    all requirements.md -> [HITL] scenario review
-    all design.md       -> [HITL] design review
-    all tests.md        -> [HITL] slice/execution review
-        |
-  gold-tests.md -> outer acceptance suite
-        |
-        v
-/xiro run
-        |
-  1. Resolve which feature to operate on
-  2. Identify ready THEN slices from that feature's tests.md
-  3. Bind each slice to a repo (`auto` if one candidate, ask if ambiguous)
-  4. Spawn Coder worker(s) for one slice each
-  5. Merge worktrees
-  6. Spawn Tester worker for exact slice verification in the bound repo
-  7. Update progress immediately by feature / scenario / THEN
-  8. Run gold tests at checkpoints and phase boundaries
-```
-
-If the workspace has multiple incomplete xiro features, `/xiro run` without a feature name must ask which feature to continue before any work begins.
-
-## BDD Model
-
-Each requirement is a scenario:
-
-```markdown
-### Scenario S1: Increment Counter
-
-**GIVEN**
-- The current number is 100 or less
-
-**WHEN**
-- The user presses the `+` button
-
-**THEN**
-- S1.T1 The displayed number increases by 1
-- S1.T2 The updated number remains visible after the click interaction completes
-```
-
-Key rules:
-
-- `GIVEN` defines preconditions
-- `WHEN` defines one triggering action
-- `THEN` defines observable outcomes
-- Each `THEN` gets a stable ID such as `S1.T1`
-- Each `THEN` becomes one executable slice in `tests.md`
-
-## `tests.md` as the Execution Artifact
-
-`tests.md` replaces `tasks.md` as the primary execution document.
-
-Each entry must include:
-
-- Scenario ID / THEN ID
-- User-visible goal
-- Repo binding (`auto` until execution binds it)
-- Dependencies on earlier slices
-- Target surface (`web-ui`, `flutter-ui`, `api`, `cli`, etc.)
-- Setup command(s)
-- Execution method
-- Explicit interaction steps
-- Assertions / expected outcomes
-- Evidence command or artifact path
-- Status checkbox
-
-### Web example
-
-```markdown
-- [ ] S2.T1 Increment button increases the visible count
-  - Scenario: S2
-  - Goal: User sees the counter go from `41` to `42`
-  - Repo: apps/counter
-  - Depends: none
-  - Surface: web-ui
-  - Setup:
-    - `npm install`
-    - `npm run dev`
-  - Method: Playwright
-  - Steps:
-    1. Open `/counter`
-    2. Confirm the visible count is `41`
-    3. Click the `+` button
-  - Assertions:
-    - Count text becomes `42`
-    - No validation error is shown
-  - **VERIFY**: `npx playwright test tests/e2e/counter.spec.ts --grep "S2.T1"` exits 0
-  - **EVIDENCE**: `.xiro/counter/evidence/phase-1/slices/S2.T1/verify.log`
-```
-
-### Flutter example
-
-```markdown
-- [ ] S3.T1 Minus button decreases the value on tap
-  - Scenario: S3
-  - Goal: User sees `10` become `9`
-  - Repo: apps/counter
-  - Depends: none
-  - Surface: flutter-ui
-  - Setup:
-    - `flutter pub get`
-    - `flutter test integration_test/counter_test.dart -d macos`
-  - Method: Flutter integration test
-  - Steps:
-    1. Launch the app with the counter seeded to `10`
-    2. Find the widget with semantics label `counter-decrement`
-    3. Tap the widget once
-  - Assertions:
-    - Visible text becomes `9`
-    - No lower-bound warning is shown
-  - **VERIFY**: `flutter test integration_test/counter_test.dart --plain-name "S3.T1"` exits 0
-  - **EVIDENCE**: `.xiro/counter/evidence/phase-1/slices/S3.T1/verify.log`
-```
-
-## Gold Tests
-
-Gold tests are still the outer acceptance layer.
-
-- 2-5 end-to-end business scenarios
-- Add-only across phases
-- Run at checkpoints and phase boundaries
-- Failures halt progress and escalate immediately
-
-Gold tests are not the daily progress unit. `THEN` slices are.
-
-## Worker Model
-
-Xiro keeps the current conceptual worker split:
-
-| Worker | Role |
-|--------|------|
-| Planner | Writes `spec.md`, `requirements.md`, `design.md`, `tests.md` |
-| Coder | Implements one `THEN` slice or a small balanced group |
-| Tester | Verifies exact slice instructions from `tests.md` and runs gold tests |
-| Simplifier | Optional cleanup after checkpoint, no behavior change |
-
-## File Structure
+## Quick Start
 
 ```text
-xiro/
-├── SKILL.md
-├── README.md
-└── references/
-    ├── spec-format.md
-    ├── orchestration.md
-    └── verification.md
+/xiro new
+/xiro spec my-feature
+/xiro run my-feature
+/xiro status my-feature
 ```
 
-## Generated Project Structure
+## How It Feels
+
+`/xiro new` starts with friendly questions:
+
+- What are we building?
+- Who uses it?
+- What must visibly work?
+- How real should the first version be?
+- What would prove it is done?
+
+The interview starts broad and narrows only when the project needs more detail. A simple mockup stays lightweight. A production-ready project gets security, data, deployment, and observability questions.
+
+## Scope Modes
+
+Xiro always records a scope mode:
+
+- `mockup-prototype`: visual or clickable proof with fixtures/local state allowed.
+- `usable-local`: the selected user journeys work locally.
+- `production-ready`: real deployment, security, persistence, integrations, and runtime evidence are part of done where relevant.
+
+## Main Files
 
 When you use xiro, it creates:
 
@@ -217,54 +42,45 @@ When you use xiro, it creates:
 ├── gold-tests.md
 ├── shared.md
 ├── phases/
-│   ├── 1-{name}/
+│   ├── 0-{phase}/
 │   │   ├── requirements.md
 │   │   ├── design.md
-│   │   └── tests.md
-│   └── 2-{name}/...
+│   │   └── slices.md
+│   └── 1-{phase}/
+│       ├── requirements.md
+│       ├── design.md
+│       └── slices.md
 └── evidence/
     ├── decisions.log
-    ├── phase-1/slices/S1.T1/...
-    └── gold/gt-1.log
+    ├── phase-0/slices/
+    ├── phase-1/slices/
+    └── gold/
 ```
 
-That `.xiro` tree is always created in the current folder where xiro was started, even if that folder only contains multiple git repos.
+Phase documents are always nested under `phases/{N}-{slug}/`. Feature-root files are limited to project/spec/gold/shared state. Use phase `0` only when the first phase is an intentional setup, design, prototype, or baseline phase; otherwise start at phase `1`.
 
-When more than one feature exists in that workspace:
+## Implementation Slices
 
-- use `/xiro list` to see all features and their progress
-- use `/xiro status <feature>` for one feature's detailed state
-- use `/xiro run <feature>` to avoid ambiguous execution
+Xiro uses `slices.md` as the execution document. Each slice tells the Coder what to build and how completion will be proven.
 
-## Reference Guides
+A slice is not a test-only task. It is an implementation target with an acceptance proof.
 
-- [spec-format.md](references/spec-format.md) — canonical formats and examples for `spec.md`, `requirements.md`, `design.md`, `tests.md`, `gold-tests.md`
-- [orchestration.md](references/orchestration.md) — worker behavior, slice batching, status/review flow
-- [verification.md](references/verification.md) — evidence rules, VERIFY syntax, environment-specific verification patterns
+## Gold Tests
 
-## Installation
+Gold tests are end-to-end journeys that prove the product works in the way the user cares about.
 
-Clone into your skill directory or symlink it there:
+Gold tests are add-only by default. New phases can add gold tests, but earlier business journeys still protect the product.
 
-```bash
-git clone https://github.com/conn-connect/xiro.git ~/.claude/skills/xiro
-```
+## Evidence
 
-or
+Every completed slice has evidence. Xiro labels evidence by strength:
 
-```bash
-git clone https://github.com/conn-connect/xiro.git ~/xiro
-ln -s ~/xiro ~/.claude/skills/xiro
-```
+- design fixture
+- mock contract
+- local integration
+- runtime compose
+- real provider
+- manual production
+- cannot verify
 
-## Requirements
-
-- Git
-- A shell environment that can run the project test/build commands
-- A coding agent environment that supports worktree isolation and worker delegation
-
-Git is required for repo-backed execution. Discovery and spec authoring can start from a non-git parent workspace.
-
-## License
-
-MIT
+Evidence labels keep summaries honest. A mock can prove a contract, but it cannot prove production behavior.
