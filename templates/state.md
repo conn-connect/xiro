@@ -4,15 +4,17 @@
 
 What can honestly be claimed now:
 
-- {claim, or "Project contract exists but implementation has not started."}
+- {claim, e.g. "Project contract exists." or "Spec and execution contracts are generated."}
 
 What cannot yet be claimed:
 
-- {missing proof, unreachable runtime path, unimplemented slice, or unavailable environment}
+- {missing proof, e.g. "Implementation has not started.", "No acceptance proof has passed.", "Runtime reachability has not been verified."}
 
 Strongest evidence class achieved: `{none | design-fixture | mock-contract | local-integration | runtime-compose | real-provider | manual-production | cannot-verify}`
 
 Safe to continue automatically: `{yes | no}`
+
+Next recommended command: `{none | /xiro spec <feature> | /xiro run <feature> | /xiro salvage <feature>}`
 
 ## Current Work
 

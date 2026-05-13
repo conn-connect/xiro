@@ -32,6 +32,12 @@ Xiro always records a scope mode:
 - `usable-local`: the selected user journeys work locally.
 - `production-ready`: real deployment, security, persistence, integrations, and runtime evidence are part of done where relevant.
 
+## Phase Boundaries
+
+Xiro commands do not automatically advance to the next phase. `/xiro new` creates only the project contract control surface. `/xiro spec` creates only planning, scenario, and execution-contract artifacts. Product implementation starts only in `/xiro run`.
+
+If the user says "implement the plan" during `/xiro new` or `/xiro spec`, Xiro treats that as permission to create only the current phase artifacts, not to scaffold or implement the product.
+
 ## Main Files
 
 When you use xiro, it separates human control files from agent execution contracts:

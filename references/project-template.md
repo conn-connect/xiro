@@ -10,6 +10,8 @@ Use `templates/project.md` as the concrete template.
 - `state.md` with initial claim status.
 - `decisions.md` when explicit decisions were made outside the project template.
 
+It must not create spec artifacts, phase docs, agent contracts, gold tests, product files, app scaffolds, packages, routes, schemas, runtime config, implementation tests, or run servers. `/xiro new` stops after the project contract control surface exists.
+
 ## Required Sections
 
 - Overview
@@ -65,7 +67,7 @@ End `project.md` with a short status:
 
 If not ready, list the exact questions that block `/xiro spec`.
 
-After `/xiro new`, `state.md` may claim only that the interview and project contract exist. It must not claim implementation, passing proofs, or runtime reachability.
+After `/xiro new`, `state.md` may claim only that the interview and project contract exist. It must not claim implementation, passing proofs, or runtime reachability. The next step may be `/xiro spec <feature>`, but `/xiro new` must not run it.
 
 ## Interview Transcript
 

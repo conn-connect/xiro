@@ -110,6 +110,15 @@ Record defaults in `project.md` as reversible decisions. If the decision affects
 
 The interview writes `.xiro/{feature}/project.md` using `project-template.md`, then creates or refreshes `brief.md` and the initial `state.md`.
 
+`/xiro new` may write only:
+
+- `.xiro/{feature}/project.md`
+- `.xiro/{feature}/brief.md`
+- `.xiro/{feature}/state.md`
+- optional `.xiro/{feature}/decisions.md`
+
+It must not create `spec.md`, `plan.md`, phase docs, agent JSON, gold tests, app directories, package files, product code, implementation tests, routes, schemas, runtime config, or run servers.
+
 The document must include:
 
 - Scope mode
@@ -122,4 +131,6 @@ The document must include:
 - Open questions with blocking status
 - Interview transcript as the final section, preserving exact questions, options, selected choices, and user comments from `/xiro new`
 
-The initial `state.md` must say that implementation has not started, no acceptance proof has passed, and runtime reachability has not been verified.
+The initial `state.md` must say that only the project contract exists, implementation has not started, no acceptance proof has passed, and runtime reachability has not been verified.
+
+After these artifacts exist, `/xiro new` stops. It may recommend `/xiro spec <feature>` when spec-ready, but it must not run it.

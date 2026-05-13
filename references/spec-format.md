@@ -25,6 +25,8 @@ Use these concrete templates when creating documents:
 
 ## `/xiro spec` Generation Order
 
+`/xiro spec` creates planning, scenario, and execution-contract artifacts only. It must not implement product behavior or automatically run the generated contracts.
+
 1. Run the spec-readiness gate.
 2. Generate or refresh `brief.md` if needed.
 3. Generate `spec.md`.
@@ -38,6 +40,38 @@ Use these concrete templates when creating documents:
 11. Update `state.md` as `planned but not implemented`.
 
 `plan.md` is not a projection of `agent/slices.json`. It is the human-readable completion plan. `agent/slices.json` is the worker execution contract derived from intent and design authority.
+
+## `/xiro spec` Boundary
+
+Allowed outputs:
+
+- refresh `brief.md`
+- `spec.md`
+- `plan.md`
+- phase `requirements.md` and `design.md`
+- optional phase `slices.md` projections
+- `agent/agents.json`
+- `agent/slices.json`
+- `agent/evidence.json`
+- optional `agent/events.jsonl`
+- `gold-tests.md`
+- updated `state.md`
+
+Forbidden outputs:
+
+- app directories
+- package files
+- product code
+- implementation tests
+- routes
+- database schemas
+- runtime config
+- package installation
+- server startup
+- Coder or Tester worker execution
+- acceptance proof execution as a completion claim
+
+After `/xiro spec`, stop. It may recommend `/xiro run <feature>` as the next command, but it must not run it.
 
 ## `brief.md`
 

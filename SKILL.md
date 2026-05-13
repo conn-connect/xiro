@@ -33,6 +33,14 @@ new -> spec -> execute -> verify -> review -> salvage when needed
 | `/xiro test [feature] [name]` | Run acceptance proofs or gold tests for a feature |
 | `/xiro salvage <feature>` | Diagnose drift or bloated output and propose a smaller human restart surface without mutating existing docs |
 
+## Phase Boundaries
+
+Xiro commands are phase-bound. A command may create only artifacts for its own phase and must not automatically advance to the next Xiro phase.
+
+If the active phase is `/xiro new` or `/xiro spec` and the user says "implement the plan", interpret that as "create the artifacts for the current Xiro phase only." Do not proceed to `/xiro spec`, `/xiro run`, product scaffolding, or product implementation unless the user explicitly asks for that next Xiro command after the current phase artifacts exist.
+
+If a phase boundary is crossed, stop with `BLOCKED: xiro phase boundary violation`.
+
 ## Document Model
 
 Xiro separates the human control surface from worker execution. Human-facing files are the primary readable control surface. Agent JSON files are canonical only for worker execution, not product intent.
@@ -149,6 +157,9 @@ Rules:
 - Record skipped modules with a reason instead of silently omitting them.
 - Create or refresh `brief.md` from the confirmed project contract.
 - Initialize `state.md` with honest claims: interview/project contract exists, implementation has not started, no acceptance proof has passed.
+- Create only `/xiro new` artifacts: `project.md`, `brief.md`, `state.md`, and optional `decisions.md`.
+- Do not create spec artifacts, agent contracts, phase docs, gold tests, product files, app scaffolds, packages, routes, schemas, runtime config, implementation tests, or run servers.
+- Stop after the new artifacts exist. Recommend `/xiro spec <feature>` only as the next command; do not run it.
 
 Read these references when running `/xiro new`:
 
@@ -158,6 +169,7 @@ Read these references when running `/xiro new`:
 - `references/module-triggers.md`
 - `references/project-template.md`
 - `references/human-control-surface.md`
+- `references/phase-boundaries.md`
 
 When the user asks to move fast with defaults, also read `references/just-build-it.md`.
 
@@ -211,6 +223,8 @@ Rules:
 - Initialize or refresh `agent/evidence.json` as an artifact index only.
 - Update `state.md` after spec generation with `planned but not implemented`; do not imply any slice proof passed.
 - Write gold tests that match the selected scope mode.
+- Do not create product files, app scaffolds, packages, routes, schemas, runtime config, implementation tests, run servers, spawn Coder/Tester workers, or execute acceptance proofs as completion claims.
+- Stop after spec artifacts and planned-only `state.md` exist. Recommend `/xiro run <feature>` only as the next command; do not run it.
 
 Read:
 
@@ -219,6 +233,7 @@ Read:
 - `references/gold-tests.md`
 - `references/human-control-surface.md`
 - `references/agent-execution-contracts.md`
+- `references/phase-boundaries.md`
 
 ## `/xiro run`
 
