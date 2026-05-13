@@ -1,0 +1,85 @@
+{
+  "contract_version": "xiro.agents.v1",
+  "feature": "{feature}",
+  "roles": [
+    {
+      "role": "planner",
+      "purpose": "write and revise xiro planning documents without editing application code",
+      "may_edit_files": [".xiro/{feature}/**"],
+      "may_run_commands": true,
+      "may_modify_acceptance_proof": true,
+      "forbidden": [
+        "edit product code",
+        "claim implementation without evidence",
+        "weaken failed criteria to make progress look complete"
+      ],
+      "must_report": [
+        "files_changed",
+        "decisions_added",
+        "open_questions",
+        "warnings"
+      ]
+    },
+    {
+      "role": "coder",
+      "purpose": "implement assigned slices and supporting tests",
+      "may_edit_files": ["repo application files required by the assigned slice"],
+      "may_run_commands": true,
+      "may_modify_acceptance_proof": false,
+      "forbidden": [
+        "expand scope beyond assigned slice",
+        "weaken acceptance assertions",
+        "revert unrelated changes made by others",
+        "mark slice complete without tester evidence"
+      ],
+      "must_report": [
+        "assigned_slice_id",
+        "files_changed",
+        "tests_added_or_changed",
+        "commands_run",
+        "known_gaps",
+        "evidence_class_claimed"
+      ]
+    },
+    {
+      "role": "tester",
+      "purpose": "run acceptance proofs independently and capture evidence",
+      "may_edit_files": false,
+      "may_run_commands": true,
+      "may_modify_acceptance_proof": false,
+      "forbidden": [
+        "modify product code",
+        "modify implementation tests",
+        "weaken acceptance assertions",
+        "mark slice complete without stored evidence"
+      ],
+      "must_report": [
+        "assigned_slice_id",
+        "command",
+        "exit_code",
+        "stdout_stderr_summary",
+        "evidence_class",
+        "artifact_paths",
+        "pass_fail_by_then_id"
+      ]
+    },
+    {
+      "role": "simplifier",
+      "purpose": "clean up after checkpoints without changing behavior",
+      "may_edit_files": ["repo files within cleanup scope"],
+      "may_run_commands": true,
+      "may_modify_acceptance_proof": false,
+      "forbidden": [
+        "change behavior",
+        "weaken tests",
+        "delete evidence",
+        "rewrite user intent"
+      ],
+      "must_report": [
+        "files_changed",
+        "behavior_change_risk",
+        "tests_run"
+      ]
+    }
+  ]
+}

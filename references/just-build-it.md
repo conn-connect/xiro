@@ -11,6 +11,7 @@ When the user says "just build it", "go fast", or similar:
 3. Ask at most one blocker question.
 4. Proceed only when the default is safe for the selected scope.
 5. Log defaults as reversible decisions.
+6. Reflect those defaults in `brief.md` and initial `state.md` without claiming implementation.
 
 ## Default Contract
 

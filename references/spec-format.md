@@ -3,21 +3,69 @@
 Xiro writes scenario documents in this order:
 
 ```text
-project.md -> spec.md -> phases/{N}-{slug}/requirements.md -> phases/{N}-{slug}/design.md -> phases/{N}-{slug}/slices.md -> gold-tests.md
+project.md -> brief.md -> spec.md -> plan.md -> phase docs -> agent/*.json -> gold-tests.md -> state.md
 ```
 
-Feature-root files are `project.md`, `spec.md`, `gold-tests.md`, and `shared.md`. Phase files are never flat at the feature root.
+Feature-root human files include `project.md`, `brief.md`, `spec.md`, `plan.md`, `state.md`, `decisions.md`, `gold-tests.md`, and `shared.md`. Worker execution contracts live under `agent/`. Phase files are never flat at the feature root.
 
 Use these concrete templates when creating documents:
 
+- `templates/brief.md`
+- `templates/decisions.md`
 - `templates/spec.md`
+- `templates/plan.md`
 - `templates/requirements.md`
 - `templates/design.md`
 - `templates/slices.md`
+- `templates/agents.json`
+- `templates/slices.json`
+- `templates/evidence.json`
+- `templates/events.jsonl`
+- `templates/state.md`
+
+## `/xiro spec` Generation Order
+
+1. Run the spec-readiness gate.
+2. Generate or refresh `brief.md` if needed.
+3. Generate `spec.md`.
+4. Generate human-readable `plan.md`.
+5. Generate phase `requirements.md` and `design.md`.
+6. Generate `agent/slices.json`.
+7. Generate `agent/agents.json` if missing.
+8. Initialize `agent/evidence.json`.
+9. Generate optional `slices.md` projections for readability.
+10. Generate `gold-tests.md`.
+11. Update `state.md` as `planned but not implemented`.
+
+`plan.md` is not a projection of `agent/slices.json`. It is the human-readable completion plan. `agent/slices.json` is the worker execution contract derived from intent and design authority.
+
+## `brief.md`
+
+Purpose: concise human-readable goal and scope.
+
+Required structure:
+
+```markdown
+# Brief: {feature}
+
+## Goal
+## Scope
+## Users
+## Must-Work Journeys
+## Key Decisions
+## Key Risks
+## Read Next
+```
+
+Rules:
+
+- Keep it short enough for a user to reorient quickly.
+- Do not include implementation minutiae.
+- Use it as an intent summary, not the intent source and not evidence.
 
 ## `spec.md`
 
-Purpose: top-level feature source of truth.
+Purpose: top-level scenario and scope specification derived from the project contract and latest explicit user instruction.
 
 Required structure:
 
@@ -54,6 +102,29 @@ Rules:
 - Phase names should be user-visible milestones.
 - Do not plan skipped modules.
 - Do not omit active modules.
+
+## `plan.md`
+
+Purpose: human-readable phase plan and test plan.
+
+Required structure:
+
+```markdown
+# Plan: {feature}
+
+## Current Goal
+## Phase Plan
+## Test Plan
+## Decisions Needed
+## Agent Contract Status
+```
+
+Rules:
+
+- Explain user-visible outcomes.
+- Separate blocking and non-blocking decisions.
+- Do not claim implementation or test success.
+- Do not duplicate the full worker contract.
 
 ## `requirements.md`
 
@@ -118,13 +189,48 @@ Rules:
 - Do not invent scope not present in `project.md` or `spec.md`.
 - Include mock/real boundaries when fixtures or providers are involved.
 
+## `agent/slices.json`
+
+Purpose: canonical worker execution contract.
+
+Path: `.xiro/{feature}/agent/slices.json`
+
+Required concepts:
+
+- contract version
+- source authority files
+- generation hashes or timestamps for stale-contract detection
+- slice id and stable `THEN` id
+- owner role
+- dependencies
+- surface and reachability
+- scope mode and activated module
+- evidence class
+- mock boundary and real-path requirement
+- boundary claim
+- build outcome
+- repo assumptions to inspect
+- implementation guidance
+- acceptance assertions
+- acceptance proof
+- evidence artifact path
+
+Rules:
+
+- Use build-outcome language instead of verification-only goal language.
+- Include repo assumptions so Coders inspect before editing.
+- Guidance is a target, not a blind patch recipe.
+- Acceptance proof must be executable or explicitly manual.
+- Evidence class must match the claim.
+- Regenerate or revise when intent or design authority changes.
+
 ## `slices.md`
 
-Purpose: implementation contract for Coder workers.
+Purpose: optional readable projection of `agent/slices.json`.
 
 Path: `.xiro/{feature}/phases/{N}-{slug}/slices.md`
 
-This is not a tester-only document. It tells Coders what to build and how completion will be proven.
+This is not the primary human control surface. It must not become the progress dashboard. Use `state.md` for status and `agent/slices.json` for worker execution.
 
 Required opening:
 
@@ -161,11 +267,44 @@ Slice shape:
 
 Rules:
 
-- Use build-outcome language instead of verification-only goal language.
-- Include repo assumptions so Coders inspect before editing.
-- Guidance is a target, not a blind patch recipe.
-- Acceptance proof must be executable or explicitly manual.
-- Evidence class must match the claim.
+- Keep it aligned with `agent/slices.json`.
+- Use it only for readability.
+- Do not use it to override intent authority, design authority, execution authority, or raw evidence.
+
+## `state.md`
+
+Purpose: primary human status and claim review document.
+
+Required structure:
+
+```markdown
+# Xiro State: {feature}
+
+## Current Claim
+## Current Work
+## Evidence Status
+## Warnings
+## User Decision Required
+## Recent Events
+```
+
+Rules:
+
+- Lead with what can and cannot honestly be claimed.
+- Include strongest evidence class achieved.
+- Separate blocking and non-blocking user decisions.
+- Set `Safe to continue automatically` to `no` if a blocking decision exists.
+- After `/xiro spec`, say contracts are generated but no implementation, proof, or runtime reachability has been verified.
+
+## `agent/evidence.json`
+
+Purpose: index of evidence artifacts.
+
+Rules:
+
+- It is not evidence by itself.
+- Each entry must point to raw artifacts under `evidence/`.
+- Missing raw artifacts mean the claim is unproven.
 
 ## `gold-tests.md`
 

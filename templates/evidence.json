@@ -1,0 +1,23 @@
+{
+  "contract_version": "xiro.evidence.v1",
+  "feature": "{feature}",
+  "note": "This file is an index of evidence artifacts. It is not evidence by itself.",
+  "entries": [
+    {
+      "then_id": "S1.T1",
+      "slice_id": "phase-{N}:S1.T1",
+      "evidence_class": "{class}",
+      "result": "{PASS|FAIL|CANNOT_VERIFY|PENDING}",
+      "proof": {
+        "type": "{command|manual|artifact}",
+        "command": "{command or null}",
+        "exit_code": "{exit code or null}"
+      },
+      "artifacts": [
+        ".xiro/{feature}/evidence/phase-{N}/slices/S1.T1/verify.log"
+      ],
+      "claim_allowed": "{claim this evidence supports}",
+      "updated_at": "{ISO 8601 timestamp}"
+    }
+  ]
+}

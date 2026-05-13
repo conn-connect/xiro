@@ -18,30 +18,40 @@ The main session is the MC/orchestrator: interview the user, keep scope honest, 
 ## Core Loop
 
 ```text
-new -> spec -> slice -> verify -> review
+new -> spec -> execute -> verify -> review -> salvage when needed
 ```
 
 ## Commands
 
 | Command | Action |
 | --- | --- |
-| `/xiro new` | Guided interview in the current folder -> `.xiro/{feature}/project.md` |
-| `/xiro spec [name]` | Convert `project.md` into `spec.md`, phase docs, implementation slices, and gold tests |
+| `/xiro new` | Guided interview in the current folder -> `.xiro/{feature}/project.md`, `brief.md`, and initial `state.md` |
+| `/xiro spec [name]` | Convert the project contract into human plan docs, agent execution contracts, phase docs, and gold tests |
 | `/xiro list` | List active xiro features in the current workspace |
 | `/xiro run [feature] [slice]` | Implement the next ready slice or a selected slice |
 | `/xiro status <feature>` | Show detailed scenario, slice, and evidence status |
 | `/xiro test [feature] [name]` | Run acceptance proofs or gold tests for a feature |
+| `/xiro salvage <feature>` | Diagnose drift or bloated output and propose a smaller human restart surface without mutating existing docs |
 
 ## Document Model
 
-Xiro stores feature-level documents at the feature root and phase-level documents under `phases/{N}-{slug}/`.
+Xiro separates the human control surface from worker execution. Human-facing files are the primary readable control surface. Agent JSON files are canonical only for worker execution, not product intent.
 
 ```text
 .xiro/{feature}/
 ├── project.md
+├── brief.md
 ├── spec.md
+├── plan.md
+├── state.md
+├── decisions.md
 ├── gold-tests.md
 ├── shared.md
+├── agent/
+│   ├── agents.json
+│   ├── slices.json
+│   ├── evidence.json
+│   └── events.jsonl
 ├── phases/
 │   ├── 0-{phase-slug}/
 │   │   ├── requirements.md
@@ -51,14 +61,77 @@ Xiro stores feature-level documents at the feature root and phase-level document
 │       ├── requirements.md
 │       ├── design.md
 │       └── slices.md
-└── evidence/
-    ├── decisions.log
-    ├── phase-0/slices/
-    ├── phase-1/slices/
-    └── gold/
+├── evidence/
+│   ├── phase-0/slices/
+│   ├── phase-1/slices/
+│   └── gold/
+└── salvage/
+    └── {timestamp}/
+        ├── salvage-report.md
+        ├── proposed-brief.md
+        ├── proposed-plan.md
+        └── proposed-state.md
 ```
 
 Use phase `0` when a real pre-foundation phase exists, such as a design/prototype shell, discovery harness, migration baseline, or other intentionally first executable phase. Otherwise start at phase `1`. Do not place phase `requirements.md`, `design.md`, or `slices.md` flat at the feature root.
+
+## Authority Model
+
+Xiro uses domain-specific authority, not a single global source of truth.
+
+### Intent Authority
+
+The source of truth for what should be built:
+
+1. Latest explicit user instruction.
+2. `project.md`.
+3. `spec.md`.
+4. `phases/{N}-{slug}/requirements.md`.
+
+`brief.md` is a human-readable projection of intent. It must not override or weaken the intent authority.
+
+### Design Authority
+
+The source of truth for how it should be built:
+
+1. `phases/{N}-{slug}/design.md`.
+2. Design sections in `spec.md`.
+3. Recorded decisions.
+
+`plan.md` is a human-readable roadmap. It must not introduce design decisions that are absent from design authority.
+
+### Execution Authority
+
+The source of truth for what workers execute:
+
+1. `agent/slices.json`.
+2. `agent/agents.json`.
+
+`agent/*.json` is canonical only for worker execution. It must not override intent or design authority.
+
+### Claim Authority
+
+The source of truth for what can honestly be claimed:
+
+1. Raw evidence artifacts under `evidence/`.
+2. Tester results.
+3. `state.md`.
+4. The No Upclaim Rule.
+
+`state.md` is the human claim ledger and an orchestration gate. It must not weaken scope, remove active modules, alter acceptance criteria, or upgrade evidence claims. If `state.md` says execution is not safe to continue, `/xiro run` must block.
+
+`agent/evidence.json` is an index of evidence artifacts; it is not evidence by itself.
+
+## Human Read Order
+
+Users should be able to understand a feature without reading worker contracts:
+
+1. `brief.md` - what is being built and why.
+2. `state.md` - what can honestly be claimed now.
+3. `plan.md` - the readable path to completion.
+4. `evidence/` - artifacts that prove claims.
+
+`slices.md` may be generated as a readable projection, but it must not be the primary control surface or a runnable execution contract. `state.md` is the primary human status document. `agent/slices.json` is the canonical worker execution contract once generated.
 
 ## `/xiro new`
 
@@ -74,6 +147,8 @@ Rules:
 - Always establish `Scope Mode`.
 - Activate technical modules only when the user's answers or repo signals require them.
 - Record skipped modules with a reason instead of silently omitting them.
+- Create or refresh `brief.md` from the confirmed project contract.
+- Initialize `state.md` with honest claims: interview/project contract exists, implementation has not started, no acceptance proof has passed.
 
 Read these references when running `/xiro new`:
 
@@ -82,6 +157,7 @@ Read these references when running `/xiro new`:
 - `references/scope-modes.md`
 - `references/module-triggers.md`
 - `references/project-template.md`
+- `references/human-control-surface.md`
 
 When the user asks to move fast with defaults, also read `references/just-build-it.md`.
 
@@ -122,12 +198,18 @@ Before writing specs, run the spec-readiness gate in `references/spec-readiness.
 
 Rules:
 
-- Plan only from facts recorded in `project.md`.
+- Plan only from facts recorded in `project.md`, `decisions.md`, and the latest explicit user instruction.
 - Refuse spec generation when an active module has unresolved blocking facts.
 - Generate user-visible phases, not implementation-layer phases.
+- Generate or refresh `brief.md` before detailed planning.
+- Generate `plan.md` as the human-readable phase plan before worker execution contracts.
 - Create one directory per phase under `.xiro/{feature}/phases/{N}-{slug}/`.
 - Write BDD scenarios with stable `THEN` IDs.
-- Write `slices.md` as implementation work, not tester-only work.
+- Write `agent/slices.json` as the canonical worker execution contract.
+- `slices.md`, when present, is a readable projection of `agent/slices.json`; do not use it as the primary human progress document.
+- Initialize or refresh `agent/agents.json` if missing.
+- Initialize or refresh `agent/evidence.json` as an artifact index only.
+- Update `state.md` after spec generation with `planned but not implemented`; do not imply any slice proof passed.
 - Write gold tests that match the selected scope mode.
 
 Read:
@@ -135,6 +217,8 @@ Read:
 - `references/spec-format.md`
 - `references/spec-readiness.md`
 - `references/gold-tests.md`
+- `references/human-control-surface.md`
+- `references/agent-execution-contracts.md`
 
 ## `/xiro run`
 
@@ -143,6 +227,9 @@ Read:
 Rules:
 
 - Resolve the feature and ready slice before spawning workers.
+- Require the vNext control surface and execution contract before spawning workers: `project.md`, `spec.md`, `brief.md`, `plan.md`, `state.md`, `agent/agents.json`, and `agent/slices.json`.
+- If required vNext files are missing, stop with `BLOCKED: missing xiro control surface` and recommend `/xiro spec <feature>` or `/xiro salvage <feature>`.
+- Do not infer runnable execution from legacy `phases/*/slices.md`.
 - Every implementation slice must be assigned to a Coder worker/subagent. Direct implementation in the main session is forbidden.
 - Give Coder workers the assigned slice as an implementation contract.
 - Coder workers inspect the repo, implement code and tests as needed, and make the acceptance proof pass without weakening intent.
@@ -150,6 +237,7 @@ Rules:
 - If no worker/subagent facility is available, stop and report `BLOCKED: worker/subagent unavailable` instead of coding directly.
 - Do not mark a slice complete without evidence.
 - Do not use weaker evidence to claim stronger completion.
+- Update `state.md` at checkpoints with claim-accurate status, warnings, blocking user decisions, and whether automatic continuation is safe.
 - Passing every slice proof and gold test is not enough for final completion if the must-work journey is not reachable through the intended UI, API, tool registry, orchestrator, CLI, or runtime entrypoint.
 - Before final completion, confirm the user can perform the promised workflow in the intended runtime path; if not, add or revise slices instead of reporting completion.
 - At checkpoints, report what works, what is fake or unavailable, how the user can test it, and where evidence lives.
@@ -160,6 +248,29 @@ Read:
 - `references/verification.md`
 - `references/evidence-policy.md`
 - `references/change-triage.md`
+- `references/human-control-surface.md`
+- `references/notification-policy.md`
+- `references/host-permissions.md`
+
+## `/xiro salvage`
+
+`/xiro salvage` recovers a readable control surface from bloated, drifted, or failed xiro output. It is diagnosis-first and non-mutating by default.
+
+Rules:
+
+- Create output under `.xiro/{feature}/salvage/{timestamp}/`.
+- Write `salvage-report.md`, `proposed-brief.md`, `proposed-plan.md`, and `proposed-state.md`.
+- Extract only confirmed facts: intended goal, confirmed decisions, observed implementation, verified behavior, unverified or suspect behavior, and drift.
+- Separate `Observed in files`, `Likely implemented`, and `Verified`.
+- Do not archive, replace, or delete existing docs during the first salvage pass.
+- Do not generate `agent/*.json` during the first salvage pass.
+- If a world-model change is detected, recommend revising the project contract/spec before implementation.
+
+Read:
+
+- `references/salvage.md`
+- `references/change-triage.md`
+- `references/human-control-surface.md`
 
 ## Evidence Classes
 
@@ -179,7 +290,7 @@ Lower evidence cannot satisfy a stronger claim. Fixture evidence cannot prove pr
 
 The orchestrator coordinates and reviews. Workers do focused work.
 
-- Planner writes spec documents.
+- Planner writes human planning docs and agent execution contracts.
 - Coder implements assigned slices.
 - Tester runs acceptance proofs and captures evidence.
 - Simplifier cleans up after checkpoints without changing behavior.

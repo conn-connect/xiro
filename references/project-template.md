@@ -4,6 +4,12 @@
 
 Use `templates/project.md` as the concrete template.
 
+`/xiro new` should also create or refresh:
+
+- `brief.md` from confirmed user intent.
+- `state.md` with initial claim status.
+- `decisions.md` when explicit decisions were made outside the project template.
+
 ## Required Sections
 
 - Overview
@@ -58,6 +64,8 @@ End `project.md` with a short status:
 - `ready with deferred items`
 
 If not ready, list the exact questions that block `/xiro spec`.
+
+After `/xiro new`, `state.md` may claim only that the interview and project contract exist. It must not claim implementation, passing proofs, or runtime reachability.
 
 ## Interview Transcript
 

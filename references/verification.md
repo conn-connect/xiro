@@ -35,6 +35,8 @@ Recommended files:
 - `summary.md`
 - screenshots or artifacts if relevant
 
+`agent/evidence.json` may index these files, but it is not evidence by itself. A `PASS` entry without a raw artifact is unproven.
+
 `verify.log` format:
 
 ```text
@@ -81,3 +83,5 @@ Manual verification must include:
 Use `cannot-verify` when the current environment cannot prove the claim.
 
 Do not hide it. Report it clearly with the exact missing environment or access.
+
+Permission failure is not negative evidence of product failure, but it is also not positive evidence of product success. If browser, shell, provider, network, credential, or worker access is blocked, record the blocked proof as `cannot-verify` and update `state.md` with the claim that cannot yet be made.

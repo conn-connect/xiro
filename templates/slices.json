@@ -1,0 +1,60 @@
+{
+  "contract_version": "xiro.slices.v1",
+  "feature": "{feature}",
+  "source_authority": {
+    "intent": [
+      "project.md",
+      "spec.md",
+      "phases/{N}-{phase-slug}/requirements.md"
+    ],
+    "design": [
+      "phases/{N}-{phase-slug}/design.md"
+    ],
+    "human_projection": [
+      "brief.md",
+      "plan.md",
+      "state.md"
+    ]
+  },
+  "generated_from": {
+    "project_hash": "{hash or timestamp}",
+    "spec_hash": "{hash or timestamp}",
+    "requirements_hash": "{hash or timestamp}",
+    "design_hash": "{hash or timestamp}"
+  },
+  "slices": [
+    {
+      "slice_id": "phase-{N}:S1.T1",
+      "then_id": "S1.T1",
+      "phase": "{N}-{phase-slug}",
+      "scenario": "S1",
+      "owner_role": "coder",
+      "status": "pending",
+      "depends_on": [],
+      "surface": "{web-ui|api|cli|worker|data|deployment}",
+      "reachability": "{runtime entrypoint that invokes this behavior}",
+      "scope_mode": "{mockup-prototype|usable-local|production-ready}",
+      "activated_module": "{module}",
+      "evidence_class": "{class}",
+      "mock_allowed": "{yes|no|only for contract}",
+      "real_path_required": true,
+      "boundary_claim": "{what this evidence may honestly claim}",
+      "build_outcome": "{what must exist after implementation}",
+      "repo_assumptions_to_inspect": [
+        "{existing file, command, route, package, or behavior to inspect before editing}"
+      ],
+      "implementation_guidance": [
+        "{target behavior; adapt to repo reality while preserving acceptance intent}"
+      ],
+      "acceptance_assertions": [
+        "{observable assertion}"
+      ],
+      "acceptance_proof": {
+        "type": "command",
+        "command": "{command}",
+        "expected": "exits 0"
+      },
+      "evidence_artifact": ".xiro/{feature}/evidence/phase-{N}/slices/S1.T1/verify.log"
+    }
+  ]
+}

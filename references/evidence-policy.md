@@ -2,6 +2,8 @@
 
 Evidence tells xiro what kind of claim a slice can honestly support.
 
+Raw evidence artifacts are the source of truth for proof. `agent/evidence.json` is only an index of those artifacts; it is not evidence by itself.
+
 ## Evidence Classes
 
 | Class | Meaning |
@@ -58,6 +60,8 @@ Final and checkpoint summaries should separate:
 - Gaps blocking user-facing completion
 - Manual verification required
 - Cannot verify in this environment
+
+Checkpoint summaries must update `state.md` with the same claim boundaries. `plan.md` and `agent/slices.json` may describe intended proof, but neither can establish that proof passed.
 
 ## Production Claims
 

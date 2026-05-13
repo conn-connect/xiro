@@ -21,6 +21,7 @@ The MC is the reviewer, coordinator, and communicator. It is not the builder dur
 - Spawn Coder workers/subagents for implementation.
 - Spawn Tester workers/subagents for independent verification.
 - Review evidence before marking progress.
+- Maintain `state.md` as the human claim ledger.
 - Triage late requirements and scope changes.
 
 ## Worker Roles
@@ -37,11 +38,17 @@ Inputs:
 
 Outputs:
 
+- `brief.md`
 - `spec.md`
+- `plan.md`
 - phase `requirements.md` at `.xiro/{feature}/phases/{N}-{slug}/requirements.md`
 - phase `design.md` at `.xiro/{feature}/phases/{N}-{slug}/design.md`
-- phase `slices.md` at `.xiro/{feature}/phases/{N}-{slug}/slices.md`
+- `agent/slices.json`
+- `agent/agents.json` when missing
+- `agent/evidence.json`
+- optional phase `slices.md` projection at `.xiro/{feature}/phases/{N}-{slug}/slices.md`
 - `gold-tests.md`
+- `state.md`
 
 ### Coder
 
@@ -95,18 +102,65 @@ Optional cleanup after checkpoints. No behavior change.
 
 ## `/xiro run` Flow
 
+### Runnable Feature Requirement
+
+Xiro vNext does not support implicit legacy execution.
+
+A feature is runnable only when the vNext control surface and execution contract exist:
+
+- `project.md`
+- `spec.md`
+- `brief.md`
+- `plan.md`
+- `state.md`
+- `agent/agents.json`
+- `agent/slices.json`
+
+If these are missing, `/xiro run` must stop with:
+
+```text
+BLOCKED: missing xiro control surface
+```
+
+The report must list missing files and recommend one of:
+
+- `/xiro spec <feature>` if `project.md` is valid and ready.
+- `/xiro salvage <feature>` if prior `.xiro` output is bloated, drifted, contradictory, or partially incompatible.
+
+Legacy `.xiro` output may be read by `/xiro salvage` as input material, but it is not a runnable execution contract. Do not infer runnable execution from legacy `phases/*/slices.md`.
+
+### Flow
+
 1. Resolve feature.
-2. Read `spec.md` summary.
-3. Read current phase docs from `.xiro/{feature}/phases/{N}-{slug}/`: `requirements.md`, `design.md`, and `slices.md`.
-4. Select ready slices.
-5. Bind each slice to a repo if needed.
-6. Spawn Coder workers/subagents for implementation. If spawning is unavailable, stop with `BLOCKED: worker/subagent unavailable`.
-7. Merge or integrate Coder output.
-8. Spawn Tester worker for acceptance proof.
-9. Record evidence.
-10. Run gold tests at checkpoint or phase boundary.
-11. Run the boundary and reachability audit.
-12. Present review summary.
+2. Verify required vNext files exist. If not, stop with `BLOCKED: missing xiro control surface`.
+3. Read `state.md` as the orchestration gate. If it says automatic continuation is unsafe, stop before executing affected slices.
+4. Read `agent/agents.json` and `agent/slices.json` for worker role contracts and ready execution contracts.
+5. Read canonical intent and design files referenced by the selected slice: `project.md`, `spec.md`, phase `requirements.md`, and phase `design.md`.
+6. If `agent/slices.json` conflicts with intent or design authority, stop affected slices and update `state.md` with a stale-contract warning.
+7. Read `agent/evidence.json` and raw `evidence/` artifacts to avoid duplicate or upclaimed work.
+8. Select ready slices.
+9. Bind each slice to a repo if needed.
+10. Spawn Coder workers/subagents for implementation. If spawning is unavailable, stop with `BLOCKED: worker/subagent unavailable`.
+11. Merge or integrate Coder output.
+12. Spawn Tester worker for acceptance proof.
+13. Record raw evidence and update `agent/evidence.json` as an index.
+14. Run gold tests at checkpoint or phase boundary.
+15. Run the boundary and reachability audit.
+16. Update `state.md` with honest claims, cannot-claim items, warnings, and blocking decisions.
+17. Present review summary.
+
+## Checkpoints
+
+At every checkpoint, `state.md` must answer:
+
+- What can honestly be claimed now?
+- What cannot yet be claimed?
+- What is the strongest evidence class achieved?
+- Which worker has which slice?
+- Is the behavior reachable through the intended runtime path?
+- Are there warning events?
+- Are there blocking user decisions?
+- Is it safe to continue automatically?
 
 ## Boundary Audit
 

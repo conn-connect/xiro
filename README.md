@@ -9,6 +9,7 @@ Xiro is a scenario-driven development skill. It helps you turn a rough idea into
 /xiro spec my-feature
 /xiro run my-feature
 /xiro status my-feature
+/xiro salvage my-feature
 ```
 
 ## How It Feels
@@ -33,14 +34,23 @@ Xiro always records a scope mode:
 
 ## Main Files
 
-When you use xiro, it creates:
+When you use xiro, it separates human control files from agent execution contracts:
 
 ```text
 .xiro/{feature}/
 ├── project.md
+├── brief.md
 ├── spec.md
+├── plan.md
+├── state.md
+├── decisions.md
 ├── gold-tests.md
 ├── shared.md
+├── agent/
+│   ├── agents.json
+│   ├── slices.json
+│   ├── evidence.json
+│   └── events.jsonl
 ├── phases/
 │   ├── 0-{phase}/
 │   │   ├── requirements.md
@@ -50,20 +60,40 @@ When you use xiro, it creates:
 │       ├── requirements.md
 │       ├── design.md
 │       └── slices.md
-└── evidence/
-    ├── decisions.log
-    ├── phase-0/slices/
-    ├── phase-1/slices/
-    └── gold/
+├── evidence/
+│   ├── phase-0/slices/
+│   ├── phase-1/slices/
+│   └── gold/
+└── salvage/
+    └── {timestamp}/
+        ├── salvage-report.md
+        ├── proposed-brief.md
+        ├── proposed-plan.md
+        └── proposed-state.md
 ```
 
-Phase documents are always nested under `phases/{N}-{slug}/`. Feature-root files are limited to project/spec/gold/shared state. Use phase `0` only when the first phase is an intentional setup, design, prototype, or baseline phase; otherwise start at phase `1`.
+Phase documents are always nested under `phases/{N}-{slug}/`. Human control files live at the feature root, worker contracts live under `agent/`, and proof artifacts live under `evidence/`. Use phase `0` only when the first phase is an intentional setup, design, prototype, or baseline phase; otherwise start at phase `1`.
+
+## Human Control Surface
+
+Read these first:
+
+1. `brief.md`: what is being built and why.
+2. `state.md`: what can honestly be claimed now.
+3. `plan.md`: the user-readable path to completion.
+4. `evidence/`: artifacts that prove claims.
+
+`state.md` is the primary human status document. It must show what can be claimed, what cannot yet be claimed, the strongest evidence class, runtime reachability, warnings, and blocking user decisions.
+
+Human read order is not truth-source precedence. `project.md`, `spec.md`, and phase `requirements.md` remain the canonical intent sources. `brief.md` and `plan.md` are readable projections. `state.md` is the claim ledger and orchestration gate.
 
 ## Implementation Slices
 
-Xiro uses `slices.md` as the execution document. Each slice tells the Coder what to build and how completion will be proven.
+Xiro uses `agent/slices.json` as the canonical worker execution contract once it exists. Each slice tells the Coder what to build and how completion will be proven.
 
 A slice is not a test-only task. It is an implementation target with an acceptance proof.
+
+`slices.md` may be generated as a readable projection of `agent/slices.json`, but it is not the primary human progress document or a runnable execution contract.
 
 ## Gold Tests
 
@@ -84,3 +114,11 @@ Every completed slice has evidence. Xiro labels evidence by strength:
 - cannot verify
 
 Evidence labels keep summaries honest. A mock can prove a contract, but it cannot prove production behavior.
+
+`agent/evidence.json` is only an index of evidence artifacts. The actual proof is the raw evidence under `evidence/`, such as `verify.log`, screenshots, command output, and other artifacts.
+
+## Salvage
+
+`/xiro salvage <feature>` is for bloated, drifted, or failed xiro output. It writes safe proposals under `.xiro/{feature}/salvage/{timestamp}/` and does not archive, replace, or delete existing docs on the first pass.
+
+Xiro vNext does not support implicit legacy execution. If a feature lacks the vNext control surface or `agent/slices.json`, `/xiro run` blocks and recommends `/xiro spec <feature>` or `/xiro salvage <feature>`. Legacy `.xiro` output may be salvage input, but it is not runnable as-is.

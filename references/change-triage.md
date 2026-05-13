@@ -35,6 +35,25 @@ Action:
 - Add backlog, new phase, or future milestone.
 - Do not silently blend it into current completion.
 
+### World-Model Change
+
+The user changes the domain rules or concept system behind existing scenarios.
+
+Examples:
+
+- a poker game changes when cards can be exchanged or who owns cards
+- a single-user tool becomes collaborative or multi-tenant
+- a local fixture flow becomes provider-backed
+- production-ready auth, persistence, or deployment becomes part of an earlier prototype
+
+Action:
+
+- Stop affected implementation progression.
+- Warn that existing slices may preserve obsolete assumptions.
+- Do not immediately regenerate `agent/slices.json`.
+- Reconfirm or rewrite the affected project contract, scenarios, and gold tests.
+- Recommend `/xiro salvage` if existing docs are hard to understand or contain conflicting assumptions.
+
 ### Production Defect
 
 The current implementation fails a production-ready boundary.

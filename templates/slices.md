@@ -1,6 +1,8 @@
 # Implementation Slices: Phase {N} — {name}
 
-Coder workers implement code and tests until these acceptance proofs pass. Do not only run verification.
+Readable projection of `agent/slices.json`.
+
+Coder workers implement code and tests until these acceptance proofs pass. Do not only run verification. `agent/slices.json` is the canonical worker execution contract; `state.md` is the primary human progress document. This file is not a runnable execution contract by itself.
 
 ## Spec Summary
 

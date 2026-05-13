@@ -104,11 +104,11 @@ When a user says "just build it", use current facts and declare defaults.
 
 Ask at most one blocker question when the wrong default would change the project materially. The usual blocker is scope mode.
 
-Record defaults in `project.md` as reversible decisions.
+Record defaults in `project.md` as reversible decisions. If the decision affects scope, acceptance, evidence, or execution, also record it in `decisions.md`.
 
 ## Output
 
-The interview writes `.xiro/{feature}/project.md` using `project-template.md`.
+The interview writes `.xiro/{feature}/project.md` using `project-template.md`, then creates or refreshes `brief.md` and the initial `state.md`.
 
 The document must include:
 
@@ -121,3 +121,5 @@ The document must include:
 - Gold-test candidates
 - Open questions with blocking status
 - Interview transcript as the final section, preserving exact questions, options, selected choices, and user comments from `/xiro new`
+
+The initial `state.md` must say that implementation has not started, no acceptance proof has passed, and runtime reachability has not been verified.
