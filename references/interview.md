@@ -10,6 +10,7 @@
 - Use concrete choices with short descriptions.
 - Always allow freeform answers.
 - Avoid jargon in early questions.
+- Write generated question text, option labels, and option descriptions in the user's active language, except for commands, filenames, IDs, enum values, framework names, and other technical tokens.
 - Record defaults and skipped modules explicitly.
 - Ask deep technical questions only when triggered by scope, user journeys, or repo signals.
 
@@ -109,6 +110,8 @@ Record defaults in `project.md` as reversible decisions. If the decision affects
 ## Output
 
 The interview writes `.xiro/{feature}/project.md` using `project-template.md`, then creates or refreshes `brief.md` and the initial `state.md`.
+
+Keep document headings and fixed labels in English. Write generated summaries, scope notes, decisions, risks, and status content in the user's active language. Preserve the interview transcript exactly as asked and answered; do not translate or normalize transcript text.
 
 `/xiro new` may write only:
 

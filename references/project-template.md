@@ -4,6 +4,8 @@
 
 Use `templates/project.md` as the concrete template.
 
+Keep the template's English headings and fixed labels. Write generated project content in the user's active language, except for exact transcript records, code, commands, paths, IDs, enum/status values, and quoted source text.
+
 `/xiro new` should also create or refresh:
 
 - `brief.md` from confirmed user intent.

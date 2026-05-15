@@ -2,34 +2,34 @@
 
 ## Current Goal
 
-{Human-readable goal for the current feature or recovery pass.}
+{In the user's active language: human-readable goal for the current feature or recovery pass.}
 
 ## Phase Plan
 
 ### Phase {N}: {name}
 
-- User-visible outcome: {what will be true for the user}
+- User-visible outcome: {In the user's active language: what will be true for the user}
 - Main work:
-  - {capability or journey step}
-- Evidence target: {evidence class and proof style}
-- Key risk: {risk or "none known"}
+  - {In the user's active language: capability or journey step}
+- Evidence target: {In the user's active language: evidence class and proof style}
+- Key risk: {In the user's active language: risk, or state that none is known}
 
 ## Test Plan
 
-- User perspective: {journey or manual/automated proof}
-- Developer/admin perspective: {runtime, data, provider, or operational proof}
-- Black-box proof: {external behavior proof}
-- White-box proof: {internal integration or unit proof}
+- User perspective: {In the user's active language: journey or manual/automated proof}
+- Developer/admin perspective: {In the user's active language: runtime, data, provider, or operational proof}
+- Black-box proof: {In the user's active language: external behavior proof}
+- White-box proof: {In the user's active language: internal integration or unit proof}
 
 ## Decisions Needed
 
 ### Blocking
 
-- {decision that changes acceptance or domain behavior, or "none"}
+- {In the user's active language: decision that changes acceptance or domain behavior, or state that there is none}
 
 ### Non-Blocking
 
-- {decision that can be deferred, or "none"}
+- {In the user's active language: decision that can be deferred, or state that there is none}
 
 ## Agent Contract Status
 

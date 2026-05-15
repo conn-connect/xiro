@@ -8,6 +8,23 @@ project.md -> brief.md -> spec.md -> plan.md -> phase docs -> agent/*.json -> go
 
 Feature-root human files include `project.md`, `brief.md`, `spec.md`, `plan.md`, `state.md`, `decisions.md`, `gold-tests.md`, and `shared.md`. Worker execution contracts live under `agent/`. Phase files are never flat at the feature root.
 
+## Generated Language
+
+The templates use English headings and fixed structural labels. Keep those headings and labels in English when generating documents.
+
+Write generated human-facing content in the user's active language:
+
+- prose paragraphs
+- bullet contents
+- table-cell explanations
+- decisions, risks, warnings, and status messages
+- scenario names and descriptions
+- journey, outcome, and acceptance descriptions
+
+Do not translate exact source records in `Interview Transcript (Verbatim)`, quoted user text, code blocks, commands, file paths, IDs, enum/status values, or raw evidence excerpts.
+
+Agent-facing JSON keys, role names, enum values, event types, and status tokens stay English. Free-text values that describe user intent or acceptance meaning should preserve the user's language when derived from human-facing docs.
+
 Use these concrete templates when creating documents:
 
 - `templates/brief.md`

@@ -4,6 +4,12 @@ Xiro must never make the primary human control surface machine-oriented.
 
 Human-facing files explain goals, status, decisions, risks, and required user choices. They are the readable interface, not the original product-intent source. Agent-facing files encode worker roles, slices, evidence indexes, and execution contracts.
 
+## Language Policy
+
+Human-facing Markdown files keep English headings and fixed structural labels, but their generated content must use the user's active language. This includes explanations, bullet contents, table cells, scenario descriptions, risks, decisions, warnings, and status messages.
+
+Do not translate exact transcript records, quoted user text, code, commands, paths, stable IDs, enum/status values, or raw evidence excerpts.
+
 ## Human Control Files
 
 Use these files for human review:

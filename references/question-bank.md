@@ -1,6 +1,6 @@
 # Question Bank
 
-Use these as patterns. Rewrite options in the user's domain language.
+Use these as patterns. Rewrite generated questions, option labels, and option descriptions in the user's active language and domain language. Keep commands, filenames, IDs, enum values, framework names, and other technical tokens as-is.
 
 These question definitions are intended for `AskUserQuestion` or the host's equivalent structured question tool. Keep each option short, concrete, and mutually distinct. Do not turn the question bank into a plain prose checklist during `/xiro new`.
 

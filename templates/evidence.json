@@ -1,7 +1,7 @@
 {
   "contract_version": "xiro.evidence.v1",
   "feature": "{feature}",
-  "note": "This file is an index of evidence artifacts. It is not evidence by itself.",
+  "note": "{In the user's active language: This file is an index of evidence artifacts. It is not evidence by itself.}",
   "entries": [
     {
       "then_id": "S1.T1",
@@ -16,7 +16,7 @@
       "artifacts": [
         ".xiro/{feature}/evidence/phase-{N}/slices/S1.T1/verify.log"
       ],
-      "claim_allowed": "{claim this evidence supports}",
+      "claim_allowed": "{In the user's active language: claim this evidence supports}",
       "updated_at": "{ISO 8601 timestamp}"
     }
   ]

@@ -2,54 +2,54 @@
 
 ## Summary
 
-- Goal: {one sentence}
+- Goal: {In the user's active language: one sentence}
 - Scope mode: `{scope}`
-- Non-goals: {short list}
-- Active modules: {short list}
-- Critical constraints: {short list}
-- Phase outline: {Phase 1}, {Phase 2}, ...
-- Gold-test candidates: {GT-1}, {GT-2}, ...
+- Non-goals: {In the user's active language: short list}
+- Active modules: {In the user's active language: short list}
+- Critical constraints: {In the user's active language: short list}
+- Phase outline: {In the user's active language: Phase 1}, {In the user's active language: Phase 2}, ...
+- Gold-test candidates: {In the user's active language: GT-1}, {In the user's active language: GT-2}, ...
 
 ## Problem
 
-{What problem is solved and why this approach matters.}
+{In the user's active language: what problem is solved and why this approach matters.}
 
 ## Users and Must-Work Journeys
 
-- User: {who}
-- Journey: {what must work}
+- User: {In the user's active language: who}
+- Journey: {In the user's active language: what must work}
 
 ## Non-Goals
 
-- {not in scope}
+- {In the user's active language: not in scope}
 
 ## Module Matrix
 
 | Module | Status | Planning Impact |
 | --- | --- | --- |
-| {module} | {status} | {impact} |
+| {module} | {status} | {In the user's active language: impact} |
 
 ## Critical Constraints
 
-- {constraint}
+- {In the user's active language: constraint}
 
 ## Phase Plan
 
-### Phase 1: {name}
+### Phase 1: {In the user's active language: name}
 
-- Outcome:
-- Scenario focus:
-- Active modules:
-- Evidence target:
+- Outcome: {In the user's active language}
+- Scenario focus: {In the user's active language}
+- Active modules: {In the user's active language}
+- Evidence target: {In the user's active language}
 
-### Phase 2: {name}
+### Phase 2: {In the user's active language: name}
 
-- Outcome:
-- Scenario focus:
-- Active modules:
-- Evidence target:
+- Outcome: {In the user's active language}
+- Scenario focus: {In the user's active language}
+- Active modules: {In the user's active language}
+- Evidence target: {In the user's active language}
 
 ## Gold-Test Candidates
 
-- GT-1: {business journey}
-- GT-2: {business journey}
+- GT-1: {In the user's active language: business journey}
+- GT-2: {In the user's active language: business journey}

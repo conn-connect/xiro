@@ -45,6 +45,14 @@ If a phase boundary is crossed, stop with `BLOCKED: xiro phase boundary violatio
 
 Xiro separates the human control surface from worker execution. Human-facing files are the primary readable control surface. Agent JSON files are canonical only for worker execution, not product intent.
 
+## Generated Language
+
+Keep Markdown headings, fixed field labels, IDs, filenames, commands, enum/status values, and template structure in English. Write the generated human-facing content in the user's active language: prose paragraphs, bullet contents, table-cell explanations, decisions, risks, scenario titles, journey descriptions, and status messages.
+
+Infer the user's active language from the latest user instruction and interview answers. If the user explicitly asks for a language, use that language for content. Do not translate exact source records in `Interview Transcript (Verbatim)`, quoted user text, code, commands, file paths, IDs, enum values, or raw evidence excerpts.
+
+Agent-facing JSON schema keys, role names, enum values, event types, and command/status tokens remain English. Product-intent free-text values inside JSON should preserve the user's language when they are copied or derived from human-facing docs; generic worker boilerplate may remain English.
+
 ```text
 .xiro/{feature}/
 ├── project.md
@@ -150,6 +158,7 @@ Rules:
 - Use `AskUserQuestion` for interview questions when the host provides it. If the host uses a different structured question tool, use that equivalent. Fall back to plain chat questions only when no structured question tool is available or the question cannot reasonably be expressed as choices.
 - Ask 1-2 short question screens at a time.
 - Prefer multiple-choice questions with short descriptions.
+- Ask generated interview questions and options in the user's active language, while preserving commands, filenames, IDs, enum values, framework names, and other technical tokens.
 - Always allow a freeform answer.
 - Ask broad product, user, journey, and scope questions before technical detail.
 - Always establish `Scope Mode`.

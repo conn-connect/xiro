@@ -32,22 +32,22 @@
       "status": "pending",
       "depends_on": [],
       "surface": "{web-ui|api|cli|worker|data|deployment}",
-      "reachability": "{runtime entrypoint that invokes this behavior}",
+      "reachability": "{In the user's active language: runtime entrypoint that invokes this behavior}",
       "scope_mode": "{mockup-prototype|usable-local|production-ready}",
       "activated_module": "{module}",
       "evidence_class": "{class}",
       "mock_allowed": "{yes|no|only for contract}",
       "real_path_required": true,
-      "boundary_claim": "{what this evidence may honestly claim}",
-      "build_outcome": "{what must exist after implementation}",
+      "boundary_claim": "{In the user's active language: what this evidence may honestly claim}",
+      "build_outcome": "{In the user's active language: what must exist after implementation}",
       "repo_assumptions_to_inspect": [
-        "{existing file, command, route, package, or behavior to inspect before editing}"
+        "{In the user's active language: existing file, command, route, package, or behavior to inspect before editing}"
       ],
       "implementation_guidance": [
-        "{target behavior; adapt to repo reality while preserving acceptance intent}"
+        "{In the user's active language: target behavior; adapt to repo reality while preserving acceptance intent}"
       ],
       "acceptance_assertions": [
-        "{observable assertion}"
+        "{In the user's active language: observable assertion}"
       ],
       "acceptance_proof": {
         "type": "command",

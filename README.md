@@ -91,6 +91,12 @@ Read these first:
 
 `state.md` is the primary human status document. It must show what can be claimed, what cannot yet be claimed, the strongest evidence class, runtime reachability, warnings, and blocking user decisions.
 
+## Generated Language
+
+Xiro keeps Markdown headings and fixed structural labels in English. Generated human-facing content uses the user's active language, including explanations, bullets, table cells, risks, decisions, scenarios, and status messages.
+
+Exact transcript records, quoted user text, code, commands, paths, stable IDs, enum/status values, and raw evidence excerpts are preserved as-is. Agent JSON schema keys and enum values remain English.
+
 Human read order is not truth-source precedence. `project.md`, `spec.md`, and phase `requirements.md` remain the canonical intent sources. `brief.md` and `plan.md` are readable projections. `state.md` is the claim ledger and orchestration gate.
 
 ## Implementation Slices
